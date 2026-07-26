@@ -1,0 +1,112 @@
+import React, { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { useSession } from "../hooks/useSession";
+
+export default function BalanceCard({ q, onNext }) {
+  const { user, castVote } = useSession();
+  const [choice, setChoice] = useState(null);
+  const [votesA, setVotesA] = useState(q.votes_a || 0);
+  const [votesB, setVotesB] = useState(q.votes_b || 0);
+  const [checking, setChecking] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  // 이 문제에 이미 투표했는지 서버에서 확인 (실제 로그인 기반이라 기기가 바뀌어도 정확함)
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("votes")
+      .select("choice")
+      .eq("question_id", q.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data) setChoice(data.choice);
+        setChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [q.id, user.id]);
+
+  const voted = Boolean(choice);
+  const totalVotes = votesA + votesB;
+  const percentA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
+  const percentB = 100 - percentA;
+
+  const vote = async (side) => {
+    if (voted || submitting) return;
+    setSubmitting(true);
+    try {
+      const result = await castVote(q.id, side);
+      setVotesA(result.votes_a);
+      setVotesB(result.votes_b);
+      setChoice(side);
+    } catch (err) {
+      console.error("투표 반영 실패:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (checking) {
+    return <div className="balance-card balance-card--loading">불러오는 중...</div>;
+  }
+
+  return (
+    <div className="balance-card">
+      <div className="balance-card__category">{q.category}</div>
+      <h3 className="balance-card__question">{q.question}</h3>
+
+      {!voted && (
+        <div className="balance-card__options">
+          <button className="balance-card__option opt-a" onClick={() => vote("A")} disabled={submitting}>
+            {q.option_a}
+          </button>
+          <div className="balance-card__vs">VS</div>
+          <button className="balance-card__option opt-b" onClick={() => vote("B")} disabled={submitting}>
+            {q.option_b}
+          </button>
+        </div>
+      )}
+
+      {voted && (
+        <div className="balance-result">
+          <div className="balance-result__row">
+            <div className="balance-result__labels">
+              <span>{q.option_a}</span>
+              <span className="balance-result__percent">{percentA}%</span>
+            </div>
+            <div className="balance-result__track">
+              <div
+                className={`balance-result__fill opt-a ${choice === "A" ? "is-my-choice" : ""}`}
+                style={{ width: `${percentA}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="balance-result__row">
+            <div className="balance-result__labels">
+              <span>{q.option_b}</span>
+              <span className="balance-result__percent">{percentB}%</span>
+            </div>
+            <div className="balance-result__track">
+              <div
+                className={`balance-result__fill opt-b ${choice === "B" ? "is-my-choice" : ""}`}
+                style={{ width: `${percentB}%` }}
+              />
+            </div>
+          </div>
+
+          <p className="balance-result__meta">
+            지금까지 <b>{totalVotes.toLocaleString()}명</b> 참여했어요 (+1 XP)
+          </p>
+        </div>
+      )}
+
+      <button className="balance-card__next" onClick={onNext}>
+        다음 문제 →
+      </button>
+    </div>
+  );
+}

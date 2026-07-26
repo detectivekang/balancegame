@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "kangseabich@naver.com";
+    }
+
+    // questions: 누구나 승인된 문제는 읽을 수 있고, 관리자는 전체(대기/반려 포함)를 읽을 수 있음
+    match /questions/{questionId} {
+      allow read: if resource.data.status == "approved" || isAdmin();
+
+      // 생성: 일반 유저는 반드시 status: "pending" 으로만 생성 가능(UGC 등록)
+      // 관리자는 엑셀 업로드 등으로 approved 상태로 바로 생성 가능
+      allow create: if isAdmin()
+        || (request.resource.data.status == "pending"
+            && request.resource.data.votesA == 0
+            && request.resource.data.votesB == 0);
+
+      // 수정: 관리자는 전체 필드 수정 가능(승인/반려).
+      // 일반 유저는 투표수(votesA, votesB)만 증가시키는 수정만 허용.
+      allow update: if isAdmin()
+        || (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(["votesA", "votesB"]));
+
+      allow delete: if isAdmin();
+    }
+
+    // users: 회원가입 정보(닉네임/나이/성별) + 레벨시스템(xp/energy).
+    // get(단건 조회)은 누구나 가능(본인 프로필 위젯 표시용), list(전체 조회/집계)는 관리자만.
+    match /users/{deviceId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        || (request.resource.data.nickname is string
+            && request.resource.data.nickname.size() > 0
+            && request.resource.data.nickname.size() <= 12
+            && request.resource.data.age is int
+            && request.resource.data.age >= 1
+            && request.resource.data.age <= 110
+            && request.resource.data.gender in ["남성", "여성"]);
+
+      // 수정: 관리자는 전체 필드 수정 가능(승인 보너스 XP 지급 등).
+      // 일반 유저는 xp/energy/energyUpdatedAt 만 수정 가능(문제 풀 때마다 갱신).
+      allow update: if isAdmin()
+        || (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(["xp", "energy", "energyUpdatedAt"]));
+
+      allow delete: if isAdmin();
+    }
+
+    // xpEvents: 명예의 전당(주간/월간 랭킹) 집계용 경험치 획득 로그. 위변조 방지가
+    // 완벽하진 않지만(README 참고), 랭킹 재미 요소를 위한 것이라 공개로 두었습니다.
+    match /xpEvents/{eventId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // users/{deviceId}/votes: 플레이어별 투표 기록 (관리자 통계용).
+    // 기기 자체 인증은 없으므로 이 데이터는 참고용 통계이며, 실제 계정 인증이
+    // 아닌 이상 완벽한 위변조 방지는 되지 않습니다(README 참고).
+    match /users/{deviceId}/votes/{questionId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // dailyActive: 일일 활성 기록. 생성만 허용.
+    match /dailyActive/{docId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
