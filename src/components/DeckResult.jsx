@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+import { useSession } from "../hooks/useSession";
+import AdFitBanner from "./AdFitBanner";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
@@ -60,6 +62,7 @@ function countMinorityPicks(answers) {
 }
 
 export default function DeckResult({ deckTitle, answers, xpEarned, onRestart, onOtherDecks, onHome }) {
+  const { player } = useSession();
   const persona = pickPersona(answers);
   const minorityCount = useMemo(() => countMinorityPicks(answers), [answers]);
   const [shareState, setShareState] = useState("idle"); // idle | copied
@@ -116,6 +119,12 @@ export default function DeckResult({ deckTitle, answers, xpEarned, onRestart, on
             홈으로
           </button>
         </div>
+
+        {!player?.isPremium && (
+          <div className="deck-result__ad">
+            <AdFitBanner adUnit="DAN-XXXXXXXXXXXXXXXX" width={320} height={100} />
+          </div>
+        )}
       </div>
     </div>
   );

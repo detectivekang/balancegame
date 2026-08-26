@@ -1,15 +1,29 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import LoginScreen from "./components/LoginScreen";
 import ProfileSetupModal from "./components/ProfileSetupModal";
 import LevelUpModal from "./components/LevelUpModal";
 import Home from "./pages/Home";
-import Submit from "./pages/Submit";
-import Admin from "./pages/Admin";
-import HallOfFame from "./pages/HallOfFame";
 import { SessionProvider, useSession } from "./hooks/useSession";
 import "./App.css";
+
+// 관리자 페이지/엑셀 업로드(xlsx 라이브러리 포함)처럼 대부분의 유저는 아예 안 여는 화면은
+// 지연 로딩해서 첫 진입(홈 화면) 번들 크기를 줄임.
+const Submit = lazy(() => import("./pages/Submit"));
+const Admin = lazy(() => import("./pages/Admin"));
+const HallOfFame = lazy(() => import("./pages/HallOfFame"));
+const Upgrade = lazy(() => import("./pages/Upgrade"));
+const UpgradeSuccess = lazy(() =>
+  import("./pages/UpgradeResult").then((m) => ({ default: m.UpgradeSuccess }))
+);
+const UpgradeFail = lazy(() =>
+  import("./pages/UpgradeResult").then((m) => ({ default: m.UpgradeFail }))
+);
+
+function RouteFallback() {
+  return <div className="page">불러오는 중...</div>;
+}
 
 // /admin 은 카카오 로그인과 별개로 자체 이메일/비밀번호 로그인을 쓰기 때문에
 // 아래 PlayerArea의 "카카오 로그인 필요" 게이트 밖에 따로 둡니다.
@@ -24,11 +38,16 @@ function PlayerArea() {
     <>
       <Header />
       <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/submit" element={<Submit />} />
-          <Route path="/hall-of-fame" element={<HallOfFame />} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/submit" element={<Submit />} />
+            <Route path="/hall-of-fame" element={<HallOfFame />} />
+            <Route path="/upgrade" element={<Upgrade />} />
+            <Route path="/upgrade/success" element={<UpgradeSuccess />} />
+            <Route path="/upgrade/fail" element={<UpgradeFail />} />
+          </Routes>
+        </Suspense>
       </main>
       <LevelUpModal />
     </>
@@ -40,7 +59,9 @@ function AdminArea() {
     <>
       <Header />
       <main>
-        <Admin />
+        <Suspense fallback={<RouteFallback />}>
+          <Admin />
+        </Suspense>
       </main>
     </>
   );

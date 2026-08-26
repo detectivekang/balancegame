@@ -7,12 +7,7 @@ export default function AdminSets() {
   const [sets, setSets] = useState([]);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    category: CATEGORIES[0],
-    title: "",
-    emoji: "🎯",
-    minLevel: 1,
-  });
+  const [form, setForm] = useState({ category: CATEGORIES[0], title: "", emoji: "🎯", minLevel: 1 });
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -90,10 +85,7 @@ export default function AdminSets() {
   };
 
   const removeSet = async (id) => {
-    const { error } = await supabase
-      .from("question_sets")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("question_sets").delete().eq("id", id);
     if (error) {
       console.error(error);
       return;
@@ -115,16 +107,9 @@ export default function AdminSets() {
 
     try {
       const coverUrl = await uploadCoverImage(supabase, file);
-      const { error } = await supabase
-        .from("question_sets")
-        .update({ cover_image_url: coverUrl })
-        .eq("id", id);
+      const { error } = await supabase.from("question_sets").update({ cover_image_url: coverUrl }).eq("id", id);
       if (error) throw error;
-      setSets((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, cover_image_url: coverUrl } : s,
-        ),
-      );
+      setSets((prev) => prev.map((s) => (s.id === id ? { ...s, cover_image_url: coverUrl } : s)));
     } catch (err) {
       console.error("커버 사진 교체 실패:", err);
     } finally {
@@ -145,10 +130,7 @@ export default function AdminSets() {
       />
 
       <form onSubmit={createSet} className="admin-sets__form">
-        <select
-          value={form.category}
-          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-        >
+        <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -176,9 +158,7 @@ export default function AdminSets() {
             min={1}
             max={30}
             value={form.minLevel}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, minLevel: e.target.value }))
-            }
+            onChange={(e) => setForm((f) => ({ ...f, minLevel: e.target.value }))}
             style={{ width: 64 }}
           />
         </label>
@@ -197,36 +177,23 @@ export default function AdminSets() {
         </div>
       )}
 
-      {sets.length === 0 && (
-        <p>
-          등록된 문제집이 없습니다. (question_sets 마이그레이션을 먼저
-          실행하세요)
-        </p>
-      )}
+      {sets.length === 0 && <p>등록된 문제집이 없습니다. (question_sets 마이그레이션을 먼저 실행하세요)</p>}
 
       <div className="admin-sets__list">
         {sets.map((s) => (
           <div key={s.id} className="admin-sets__item">
             {s.cover_image_url ? (
-              <img
-                className="admin-sets__thumb"
-                src={s.cover_image_url}
-                alt=""
-              />
+              <img className="admin-sets__thumb" src={s.cover_image_url} alt="" />
             ) : (
               <span className="admin-sets__emoji">{s.emoji}</span>
             )}
             <div className="admin-sets__info">
               <div className="admin-sets__title">{s.title}</div>
               <div className="admin-sets__meta">
-                {s.category} · 문제 {counts[s.id] || 0}개
-                {s.min_level > 1 ? ` · Lv.${s.min_level} 이상` : ""}
+                {s.category} · 문제 {counts[s.id] || 0}개{s.min_level > 1 ? ` · Lv.${s.min_level} 이상` : ""}
               </div>
             </div>
-            <button
-              onClick={() => startReplaceCover(s.id)}
-              className="admin-sets__replace-btn"
-            >
+            <button onClick={() => startReplaceCover(s.id)} className="admin-sets__replace-btn">
               사진 변경
             </button>
             <button onClick={() => removeSet(s.id)} className="is-danger">

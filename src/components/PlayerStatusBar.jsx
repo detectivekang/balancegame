@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import { MAX_LEVEL } from "../utils/levels";
 import { nextStreakMilestone, STREAK_MILESTONES } from "../utils/streak";
@@ -59,6 +60,11 @@ export default function PlayerStatusBar() {
           <button className="player-status__ad-btn" onClick={() => setShowAd(true)}>
             🎬 +3
           </button>
+        )}
+        {!player.isPremium && (
+          <Link to="/upgrade" className="player-status__upgrade-link">
+            👑
+          </Link>
         )}
       </div>
 

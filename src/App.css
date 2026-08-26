@@ -803,6 +803,12 @@ main {
   cursor: pointer;
 }
 
+.player-status__upgrade-link {
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .player-status__streak-claim {
   margin-top: 10px;
   width: 100%;
@@ -889,6 +895,15 @@ main {
   padding: 12px 20px;
   border-radius: 999px;
   cursor: pointer;
+}
+
+.energy-empty__upgrade-link {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b8860b;
+  text-decoration: none;
 }
 
 /* 광고 시청(시뮬레이션) 모달 */
@@ -1839,4 +1854,101 @@ main {
   padding: 12px 28px;
   border-radius: var(--radius-md);
   cursor: pointer;
+}
+
+/* 무제한 이용권 결제 페이지 */
+.page--upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.upgrade-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 36px 26px;
+  text-align: center;
+  width: 100%;
+  max-width: 360px;
+}
+
+.upgrade-card__icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.upgrade-card h2 {
+  margin: 0 0 10px;
+  font-size: 19px;
+}
+
+.upgrade-card__price {
+  font-size: 15px;
+  color: var(--color-muted);
+  margin: 0 0 18px;
+}
+
+.upgrade-card__price b {
+  color: var(--color-text);
+  font-size: 22px;
+}
+
+.upgrade-card__benefits {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.upgrade-card__error {
+  color: var(--color-a);
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.upgrade-card__btn {
+  width: 100%;
+  border: none;
+  background: linear-gradient(120deg, #a06cff, var(--color-accent));
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.upgrade-card__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.upgrade-card__note {
+  margin: 14px 0 0;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+/* 광고 배너 영역 */
+.adfit-banner {
+  display: flex;
+  justify-content: center;
+  min-height: 100px;
+}
+
+.home-ad {
+  margin-top: 20px;
+}
+
+.deck-result__ad {
+  position: relative;
+  z-index: 2;
+  margin-top: 16px;
 }

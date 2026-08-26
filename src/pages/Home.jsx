@@ -9,6 +9,7 @@ import DeckResult from "../components/DeckResult";
 import BalanceCard from "../components/BalanceCard";
 import PlayerStatusBar from "../components/PlayerStatusBar";
 import EnergyEmpty from "../components/EnergyEmpty";
+import AdFitBanner from "../components/AdFitBanner";
 import { useSession } from "../hooks/useSession";
 
 function shuffle(arr) {
@@ -261,6 +262,11 @@ export default function Home() {
       <DeckRow title="🔥 신규 문제집" decks={newDecks} onSelect={startDeck} />
       <DeckRow title="🏆 베스트 문제집" decks={bestDecks} onSelect={startDeck} />
       <CategoryGrid categories={CATEGORIES} counts={counts} onSelect={goCategory} />
+      {!player?.isPremium && (
+        <div className="home-ad">
+          <AdFitBanner adUnit="DAN-XXXXXXXXXXXXXXXX" width={320} height={100} />
+        </div>
+      )}
     </div>
   );
 }

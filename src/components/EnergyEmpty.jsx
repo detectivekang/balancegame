@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import AdWatchModal from "./AdWatchModal";
 
@@ -25,6 +26,10 @@ export default function EnergyEmpty() {
       <button className="energy-empty__ad-btn" onClick={() => setShowAd(true)}>
         🎬 광고 보고 에너지 +3 받기
       </button>
+
+      <Link to="/upgrade" className="energy-empty__upgrade-link">
+        👑 무제한 이용권으로 광고 없이 즐기기
+      </Link>
 
       {showAd && <AdWatchModal onClose={() => setShowAd(false)} />}
     </div>
