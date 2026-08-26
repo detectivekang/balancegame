@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 
-export default function BalanceCard({ q, onNext }) {
+export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 문제 →" }) {
   const { user, castVote } = useSession();
   const [choice, setChoice] = useState(null);
   const [votesA, setVotesA] = useState(q.votes_a || 0);
   const [votesB, setVotesB] = useState(q.votes_b || 0);
   const [checking, setChecking] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   // 이 문제에 이미 투표했는지 서버에서 확인 (실제 로그인 기반이라 기기가 바뀌어도 정확함)
   useEffect(() => {
@@ -37,13 +38,24 @@ export default function BalanceCard({ q, onNext }) {
   const vote = async (side) => {
     if (voted || submitting) return;
     setSubmitting(true);
+    setErrorMsg(null);
     try {
       const result = await castVote(q.id, side);
       setVotesA(result.votes_a);
       setVotesB(result.votes_b);
       setChoice(side);
+      onVoted && onVoted(side, result.votes_a, result.votes_b);
     } catch (err) {
       console.error("투표 반영 실패:", err);
+      // 서버 함수(cast_vote)가 던지는 대표적인 원인들을 사람이 읽을 수 있는 메시지로 변환
+      const raw = err?.message || "";
+      let friendly = "투표에 실패했어요. 잠시 후 다시 시도해주세요.";
+      if (raw.includes("not enough energy")) friendly = "에너지가 부족해요! 잠시 후 다시 시도해주세요.";
+      else if (raw.includes("question not available"))
+        friendly = "이 문제는 아직 승인되지 않았거나 삭제됐어요.";
+      else if (raw.includes("not authenticated")) friendly = "로그인이 만료됐어요. 다시 로그인해주세요.";
+      else if (raw.includes("duplicate key")) friendly = "이미 투표한 문제예요.";
+      setErrorMsg(friendly);
     } finally {
       setSubmitting(false);
     }
@@ -58,6 +70,8 @@ export default function BalanceCard({ q, onNext }) {
       <div className="balance-card__category">{q.category}</div>
       <h3 className="balance-card__question">{q.question}</h3>
 
+      {errorMsg && <p className="balance-card__error">⚠️ {errorMsg}</p>}
+
       {!voted && (
         <div className="balance-card__options">
           <button className="balance-card__option opt-a" onClick={() => vote("A")} disabled={submitting}>
@@ -71,7 +85,7 @@ export default function BalanceCard({ q, onNext }) {
       )}
 
       {voted && (
-        <div className="balance-result">
+        <div className="balance-result balance-result--reveal">
           <div className="balance-result__row">
             <div className="balance-result__labels">
               <span>{q.option_a}</span>
@@ -105,7 +119,7 @@ export default function BalanceCard({ q, onNext }) {
       )}
 
       <button className="balance-card__next" onClick={onNext}>
-        다음 문제 →
+        {nextLabel}
       </button>
     </div>
   );

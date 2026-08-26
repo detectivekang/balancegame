@@ -1,5 +1,17 @@
 export const CATEGORIES = ["연애/심리", "일상/개취", "커리어/현실", "상상/극단적 선택"];
 
+// 카테고리별 이모지/색상 클래스 - CategoryGrid, DeckCard 등에서 공용으로 사용
+export const CATEGORY_META = {
+  "연애/심리": { emoji: "💕", className: "is-love" },
+  "일상/개취": { emoji: "🍗", className: "is-daily" },
+  "커리어/현실": { emoji: "💼", className: "is-career" },
+  "상상/극단적 선택": { emoji: "🚀", className: "is-imagine" },
+};
+
+export function categoryMeta(category) {
+  return CATEGORY_META[category] || { emoji: "⚖️", className: "" };
+}
+
 // DB가 비어있을 때 앱이 바로 동작하도록 넣어두는 샘플 데이터.
 // scripts/seed.js 로 Supabase에 한 번만 업로드하면 됩니다.
 export const SAMPLE_QUESTIONS = [

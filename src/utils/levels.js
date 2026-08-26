@@ -34,7 +34,7 @@ export function energyCapForLevel(level) {
   return level + 4;
 }
 
-export const ENERGY_REGEN_MS = 30 * 60 * 1000;
+export const ENERGY_REGEN_MS = 5 * 60 * 1000; // 30분 -> 5분으로 단축 (라이트 유저 이탈 방지)
 
 // 롤 티어 스타일 등급 (레벨 1~30을 7단계로 분배)
 export const TIERS = [

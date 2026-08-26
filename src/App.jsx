@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import LoginScreen from "./components/LoginScreen";
 import ProfileSetupModal from "./components/ProfileSetupModal";
+import LevelUpModal from "./components/LevelUpModal";
 import Home from "./pages/Home";
 import Submit from "./pages/Submit";
 import Admin from "./pages/Admin";
@@ -29,6 +30,7 @@ function PlayerArea() {
           <Route path="/hall-of-fame" element={<HallOfFame />} />
         </Routes>
       </main>
+      <LevelUpModal />
     </>
   );
 }

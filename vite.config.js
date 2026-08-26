@@ -6,5 +6,5 @@ import react from "@vitejs/plugin-react";
 // (예: 저장소 이름이 balance-game 이면 base: '/balance-game/')
 export default defineConfig({
   plugins: [react()],
-  base: "/balance-game-app/",
+  base: '/balancegame/', // 이 부분을 추가해주세요!
 });

@@ -10,6 +10,7 @@ export default function AdminPlayers() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
 
   const loadPage = async (pageIndex) => {
     const from = pageIndex * PAGE_SIZE;
@@ -44,6 +45,7 @@ export default function AdminPlayers() {
           xp,
           level,
           tier: tierForLevel(level),
+          isPremium: Boolean(p.is_premium),
         };
       })
     );
@@ -64,6 +66,24 @@ export default function AdminPlayers() {
     setLoadingMore(false);
   };
 
+  // ⚠️ 실제 결제(토스페이먼츠/카카오페이/앱스토어 IAP 등) 연동 전까지 임시로
+  // 관리자가 수동으로 무제한 이용권을 켜고 끄는 버튼입니다.
+  // 실 서비스에서는 결제 완료 웹훅에서 is_premium/premium_until을 채우는 방식으로 대체하면 됩니다.
+  const togglePremium = async (player) => {
+    setTogglingId(player.id);
+    const next = !player.isPremium;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_premium: next, premium_until: null })
+      .eq("id", player.id);
+    setTogglingId(null);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setPlayers((prev) => prev.map((p) => (p.id === player.id ? { ...p, isPremium: next } : p)));
+  };
+
   if (loading) return <p>불러오는 중...</p>;
   if (players.length === 0) return <p>아직 가입한 플레이어가 없습니다.</p>;
 
@@ -80,6 +100,7 @@ export default function AdminPlayers() {
               <th>XP</th>
               <th>가입일</th>
               <th>참여 문제 수</th>
+              <th>무제한 이용권</th>
             </tr>
           </thead>
           <tbody>
@@ -94,6 +115,15 @@ export default function AdminPlayers() {
                 <td>{p.xp.toLocaleString()}</td>
                 <td>{p.firstSeenDate}</td>
                 <td>{p.voteCount.toLocaleString()}</td>
+                <td>
+                  <button
+                    className={`admin-players__premium-btn ${p.isPremium ? "is-on" : ""}`}
+                    onClick={() => togglePremium(p)}
+                    disabled={togglingId === p.id}
+                  >
+                    {p.isPremium ? "✅ 이용중" : "부여하기"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

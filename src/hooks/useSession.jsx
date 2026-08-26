@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, ADMIN_EMAIL } from "../lib/supabaseClient";
 import {
   energyCapForLevel,
@@ -7,6 +7,7 @@ import {
   tierForLevel,
   xpToNextLevel,
 } from "../utils/levels";
+import { computeStreak } from "../utils/streak";
 
 const SessionContext = createContext(null);
 
@@ -14,11 +15,20 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function isPremiumActive(profile) {
+  if (!profile?.is_premium) return false;
+  if (!profile.premium_until) return true; // 만료일 없으면 영구(관리자가 수동 부여한 경우 등)
+  return new Date(profile.premium_until).getTime() > Date.now();
+}
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 로딩중, null = 비로그인
   const [profile, setProfile] = useState(null); // undefined 아님: 아직 안 불러왔으면 null
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [streak, setStreak] = useState(0);
+  const [levelUpInfo, setLevelUpInfo] = useState(null); // { level } | null
+  const prevLevelRef = useRef(null);
 
   // 세션 로드 + 변경 감지
   useEffect(() => {
@@ -51,12 +61,25 @@ export function SessionProvider({ children }) {
         if (error) console.error("프로필 로딩 실패:", error);
         setProfile(data || null);
         setProfileLoaded(true);
+        if (data) prevLevelRef.current = levelForXp(data.xp || 0); // 최초 로드시 레벨업 팝업 안 뜨게 기준값 저장
 
         if (data) {
           // 오늘 방문 기록(DAU) - 실패해도 무시
           await supabase
             .from("daily_active")
             .upsert({ user_id: userId, date: todayStr() }, { onConflict: "user_id,date" });
+
+          // 최근 40일 방문 기록으로 연속 출석일 계산 (표시용, 서버가 보상 지급 시 재검증)
+          const since = new Date();
+          since.setDate(since.getDate() - 40);
+          const { data: activeDays } = await supabase
+            .from("daily_active")
+            .select("date")
+            .eq("user_id", userId)
+            .gte("date", since.toISOString().slice(0, 10));
+          if (!cancelled) {
+            setStreak(computeStreak((activeDays || []).map((r) => r.date)));
+          }
         }
       });
 
@@ -73,6 +96,8 @@ export function SessionProvider({ children }) {
 
   const isAdmin = session?.user?.email === ADMIN_EMAIL;
 
+  const premium = isPremiumActive(profile);
+
   const player = useMemo(() => {
     if (!profile) return null;
     const xp = profile.xp || 0;
@@ -81,9 +106,9 @@ export function SessionProvider({ children }) {
     const updatedAtMs = new Date(profile.energy_updated_at).getTime();
     const elapsedMs = Math.max(0, now - updatedAtMs);
     const regen = Math.floor(elapsedMs / ENERGY_REGEN_MS);
-    const currentEnergy = Math.min(cap, (profile.energy || 0) + regen);
+    const currentEnergy = premium ? cap : Math.min(cap, (profile.energy || 0) + regen);
     const msUntilNext =
-      currentEnergy >= cap ? null : ENERGY_REGEN_MS - (elapsedMs % ENERGY_REGEN_MS);
+      premium || currentEnergy >= cap ? null : ENERGY_REGEN_MS - (elapsedMs % ENERGY_REGEN_MS);
 
     return {
       xp,
@@ -93,8 +118,24 @@ export function SessionProvider({ children }) {
       currentEnergy,
       msUntilNext,
       progress: xpToNextLevel(level, xp),
+      isPremium: premium,
     };
-  }, [profile, now]);
+  }, [profile, now, premium]);
+
+  // 레벨업 감지 -> 레벨업 연출 트리거
+  useEffect(() => {
+    if (!player) return;
+    if (prevLevelRef.current === null) {
+      prevLevelRef.current = player.level;
+      return;
+    }
+    if (player.level > prevLevelRef.current) {
+      setLevelUpInfo({ level: player.level, tier: player.tier });
+    }
+    prevLevelRef.current = player.level;
+  }, [player]);
+
+  const dismissLevelUp = () => setLevelUpInfo(null);
 
   const signInWithKakao = async () => {
     await supabase.auth.signInWithOAuth({
@@ -133,6 +174,25 @@ export function SessionProvider({ children }) {
     return data; // { votes_a, votes_b, xp, energy }
   };
 
+  // 리워드 광고 시청 완료 콜백에서 호출 - 하루 5회까지 에너지 +3.
+  // ⚠️ 실제 서비스에서는 광고 SDK(AdMob/카카오 AdFit 등)의 "보상형 광고 시청 완료" 콜백
+  //   안에서만 이 함수를 호출해야 함. 지금은 광고 SDK가 연결되어 있지 않아
+  //   AdWatchModal에서 시뮬레이션(로딩 후 자동완료)으로 대체돼 있음 - 실제 SDK 연동 시 그 부분만 교체하면 됨.
+  const claimAdEnergy = async () => {
+    const { data, error } = await supabase.rpc("claim_ad_energy").single();
+    if (error) throw error;
+    setProfile((prev) => (prev ? { ...prev, energy: data.energy } : prev));
+    return data; // { energy, cap, remaining_today }
+  };
+
+  // 출석 스트릭 마일스톤(3/7/14/30일) 보너스 수령
+  const claimStreakBonus = async (milestone) => {
+    const { data, error } = await supabase.rpc("claim_streak_bonus", { p_milestone: milestone }).single();
+    if (error) throw error;
+    setProfile((prev) => (prev ? { ...prev, energy: data.energy } : prev));
+    return data; // { energy, cap }
+  };
+
   const value = {
     session,
     user: session?.user || null,
@@ -141,11 +201,16 @@ export function SessionProvider({ children }) {
     profile,
     needsProfileSetup: Boolean(session?.user) && profileLoaded && !profile,
     player,
+    streak,
+    levelUpInfo,
+    dismissLevelUp,
     signInWithKakao,
     signInAdmin,
     signOut,
     completeProfile,
     castVote,
+    claimAdEnergy,
+    claimStreakBonus,
   };
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

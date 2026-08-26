@@ -1,11 +1,5 @@
 import React from "react";
-
-const CATEGORY_META = {
-  "연애/심리": { emoji: "💕", className: "is-love" },
-  "일상/개취": { emoji: "🍗", className: "is-daily" },
-  "커리어/현실": { emoji: "💼", className: "is-career" },
-  "상상/극단적 선택": { emoji: "🚀", className: "is-imagine" },
-};
+import { categoryMeta } from "../data/categories";
 
 export default function CategoryGrid({ categories, counts, onSelect }) {
   return (
@@ -13,7 +7,7 @@ export default function CategoryGrid({ categories, counts, onSelect }) {
       <h2 className="category-grid__title">어떤 밸런스게임 할까요?</h2>
       <div className="category-grid__list">
         {categories.map((c) => {
-          const meta = CATEGORY_META[c] || { emoji: "⚖️", className: "" };
+          const meta = categoryMeta(c);
           return (
             <button
               key={c}

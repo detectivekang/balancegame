@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSession } from "../hooks/useSession";
+import AdWatchModal from "./AdWatchModal";
 
 function formatMinutes(ms) {
   const min = Math.ceil(ms / 60000);
@@ -8,6 +9,7 @@ function formatMinutes(ms) {
 
 export default function EnergyEmpty() {
   const { player } = useSession();
+  const [showAd, setShowAd] = useState(false);
 
   return (
     <div className="energy-empty">
@@ -18,7 +20,13 @@ export default function EnergyEmpty() {
           ? `${formatMinutes(player.msUntilNext)} 후에 에너지가 1 채워져요.`
           : "잠시 후 다시 시도해주세요."}
       </p>
-      <p className="energy-empty__desc">30분마다 에너지가 1씩 자동으로 회복돼요.</p>
+      <p className="energy-empty__desc">5분마다 에너지가 1씩 자동으로 회복돼요.</p>
+
+      <button className="energy-empty__ad-btn" onClick={() => setShowAd(true)}>
+        🎬 광고 보고 에너지 +3 받기
+      </button>
+
+      {showAd && <AdWatchModal onClose={() => setShowAd(false)} />}
     </div>
   );
 }

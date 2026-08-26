@@ -13,10 +13,10 @@ export default function Header() {
       </Link>
       <nav className="app-header__nav">
         {profile?.nickname && <span className="app-header__nickname">{profile.nickname}님</span>}
-        {isAdmin && <span className="app-header__nickname">관리자</span>}
         <Link to="/submit">문제 등록</Link>
         <Link to="/hall-of-fame">명예의전당</Link>
-        <Link to="/admin">관리자</Link>
+        {isAdmin && <span className="app-header__nickname">관리자</span>}
+        {isAdmin && <Link to="/admin">관리자 페이지</Link>}
       </nav>
     </header>
   );

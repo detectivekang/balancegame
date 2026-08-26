@@ -5,10 +5,12 @@ import AdminDashboard from "./AdminDashboard";
 import AdminApprovals from "./AdminApprovals";
 import AdminExcelUpload from "./AdminExcelUpload";
 import AdminPlayers from "./AdminPlayers";
+import AdminSets from "./AdminSets";
 
 const TABS = [
   { key: "dashboard", label: "대시보드" },
   { key: "players", label: "플레이어" },
+  { key: "sets", label: "문제집 관리" },
   { key: "approvals", label: "승인 관리" },
   { key: "excel", label: "엑셀 업로드" },
 ];
@@ -41,6 +43,7 @@ export default function Admin() {
 
       {tab === "dashboard" && <AdminDashboard />}
       {tab === "players" && <AdminPlayers />}
+      {tab === "sets" && <AdminSets />}
       {tab === "approvals" && <AdminApprovals />}
       {tab === "excel" && <AdminExcelUpload />}
     </div>
