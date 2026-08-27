@@ -1,0 +1,1 @@
+const e=["애니","아이돌","배우","게임","상황"],a={애니:{emoji:"🎨",className:"is-anime"},아이돌:{emoji:"🎤",className:"is-kpop"},배우:{emoji:"🎭",className:"is-actor"},게임:{emoji:"🎮",className:"is-game"},상황:{emoji:"🌀",className:"is-scenario"}};function o(s){return a[s]||{emoji:"🏆",className:""}}const i=[4,8,16,32,64,128,256];export{i as R,e as W,o as w};
