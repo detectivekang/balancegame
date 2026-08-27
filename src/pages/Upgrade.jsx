@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
+import { loadTossPayments, ANONYMOUS } from "@tosspayments/tosspayments-sdk";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 
@@ -18,8 +18,10 @@ export default function Upgrade() {
 
   useEffect(() => {
     if (player?.isPremium) return;
+    // v2 SDK는 loadTossPayments로 SDK 인스턴스를 받은 뒤, payment()로 "결제 인스턴스"를
+    // 따로 만들어서 그 위에서 requestPayment를 호출해야 함 (tossPayments 객체에 직접 호출 X).
     loadTossPayments(TOSS_CLIENT_KEY).then((tossPayments) => {
-      widgetRef.current = tossPayments;
+      widgetRef.current = tossPayments.payment({ customerKey: ANONYMOUS });
     });
   }, [player?.isPremium]);
 

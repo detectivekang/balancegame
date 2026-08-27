@@ -29,9 +29,10 @@ export function xpToNextLevel(level, xp) {
   };
 }
 
-// 레벨별 최대 에너지: 레벨1=5, 레벨2=6 ... (레벨 + 4), 30분에 1씩 회복
+// 레벨별 최대 에너지: 레벨1=10, 레벨2=11 ... (레벨 + 9), 5분에 1씩 회복
+// (기존엔 레벨+4라 Lv.1 캡이 5였는데, 월드컵 입장료(5)를 감당하기엔 너무 빠듯해서 상향함)
 export function energyCapForLevel(level) {
-  return level + 4;
+  return level + 9;
 }
 
 export const ENERGY_REGEN_MS = 5 * 60 * 1000; // 30분 -> 5분으로 단축 (라이트 유저 이탈 방지)

@@ -148,6 +148,21 @@ main {
 .category-grid__card.is-imagine {
   background: linear-gradient(160deg, #a06cff, #6c5ce7);
 }
+.category-grid__card.is-food {
+  background: linear-gradient(160deg, #ff9a6c, #ff5e3a);
+}
+.category-grid__card.is-relationship {
+  background: linear-gradient(160deg, #6cd6c8, #2fae9c);
+}
+.category-grid__card.is-culture {
+  background: linear-gradient(160deg, #ff8ac2, #d84a9c);
+}
+.category-grid__card.is-travel {
+  background: linear-gradient(160deg, #6cc9ff, #2f8fe0);
+}
+.category-grid__card.is-nostalgia {
+  background: linear-gradient(160deg, #c9a876, #9c7a45);
+}
 
 .category-grid__emoji {
   font-size: 32px;
@@ -715,6 +730,16 @@ main {
   border-top: 1px solid var(--color-border);
 }
 
+.admin-players__error {
+  background: rgba(255, 84, 112, 0.1);
+  color: var(--color-a);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin: 0 0 14px;
+}
+
 .admin-players__premium-btn {
   border: none;
   background: var(--color-border);
@@ -1208,9 +1233,19 @@ main {
 }
 
 .balance-card--loading {
-  text-align: center;
-  color: var(--color-muted);
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.balance-card__loading-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: adSpin 0.8s linear infinite;
 }
 
 /* ============================================================================
@@ -1225,6 +1260,26 @@ main {
   padding: 10px 14px;
   border-radius: var(--radius-md);
   margin: 0 0 18px;
+}
+
+.balance-card__replay-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+  background: var(--color-border);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.balance-result__previous {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--color-text);
+  background: rgba(160, 108, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
 }
 
 .balance-result--reveal {
@@ -1259,8 +1314,7 @@ main {
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 4px;
-  margin: 0 -18px;
-  padding-left: 18px;
+  margin-right: -18px;
   padding-right: 18px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
@@ -1322,6 +1376,21 @@ main {
 }
 .deck-card.is-imagine {
   background-image: linear-gradient(160deg, #a06cff, #6c5ce7);
+}
+.deck-card.is-food {
+  background-image: linear-gradient(160deg, #ff9a6c, #ff5e3a);
+}
+.deck-card.is-relationship {
+  background-image: linear-gradient(160deg, #6cd6c8, #2fae9c);
+}
+.deck-card.is-culture {
+  background-image: linear-gradient(160deg, #ff8ac2, #d84a9c);
+}
+.deck-card.is-travel {
+  background-image: linear-gradient(160deg, #6cc9ff, #2f8fe0);
+}
+.deck-card.is-nostalgia {
+  background-image: linear-gradient(160deg, #c9a876, #9c7a45);
 }
 
 /* 사진 배경 카드는 아래로 갈수록 어두워지는 스크림을 깔아서 흰 글씨 가독성 확보 */
@@ -1951,4 +2020,582 @@ main {
   position: relative;
   z-index: 2;
   margin-top: 16px;
+}
+
+/* 전역 로딩 화면 */
+.loading-screen {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.loading-screen__logo {
+  font-size: 40px;
+  animation: loadingPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+.loading-screen__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: adSpin 0.8s linear infinite;
+}
+
+.loading-screen__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: -0.01em;
+}
+
+.hall-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.hall-loading__spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: adSpin 0.8s linear infinite;
+}
+
+/* ============================================================================
+   모드 탭 (밸런스게임 / 이상형 월드컵)
+   ============================================================================ */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 18px 0;
+}
+
+.mode-tabs__item {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.mode-tabs__item.is-active {
+  color: #fff;
+  background: linear-gradient(120deg, #a06cff, var(--color-accent));
+}
+
+/* ============================================================================
+   이상형 월드컵 - 카테고리 필터 칩
+   ============================================================================ */
+.wc-category-filter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 -18px 16px;
+  padding: 0 18px 4px;
+}
+
+.wc-category-filter::-webkit-scrollbar {
+  display: none;
+}
+
+.wc-category-filter__chip {
+  flex: none;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wc-category-filter__chip.is-active {
+  background: linear-gradient(120deg, #a06cff, var(--color-accent));
+  color: #fff;
+}
+
+/* 월드컵 카드 그리드 */
+.wc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 90px;
+}
+
+.wc-card {
+  position: relative;
+  border: none;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px;
+  box-shadow: 0 10px 28px rgba(23, 23, 28, 0.16);
+  background-size: cover;
+  background-position: center;
+  background-color: #6c5ce7;
+  scroll-snap-align: start;
+}
+
+.wc-card--grid {
+  aspect-ratio: 3 / 4;
+}
+
+.wc-card--sm {
+  min-width: 148px;
+  max-width: 148px;
+  height: 190px;
+}
+
+.wc-card:active {
+  transform: scale(0.97);
+}
+
+.wc-card__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  opacity: 0.55;
+}
+
+.wc-card__fallback.is-anime {
+  background: linear-gradient(160deg, #ff8ac2, #d84a9c);
+}
+.wc-card__fallback.is-kpop {
+  background: linear-gradient(160deg, #a06cff, #6c5ce7);
+}
+.wc-card__fallback.is-actor {
+  background: linear-gradient(160deg, #6c8bff, #3f5efc);
+}
+.wc-card__fallback.is-game {
+  background: linear-gradient(160deg, #6cd6c8, #2fae9c);
+}
+.wc-card__fallback.is-scenario {
+  background: linear-gradient(160deg, #ffc86b, #ff9f43);
+}
+
+.wc-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.15) 45%, rgba(0, 0, 0, 0.72) 100%);
+  z-index: 0;
+}
+
+.wc-card__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.wc-card__category {
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.9;
+}
+
+.wc-card__title {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.wc-card__meta {
+  font-size: 11px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.wc-card__footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.wc-card__author-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.wc-card__author-name {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.92;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 월드컵 만들기 플로팅 버튼 */
+.wc-create-fab {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: 444px;
+  width: calc(100% - 36px);
+  text-align: center;
+  text-decoration: none;
+  background: linear-gradient(120deg, #a06cff, var(--color-accent));
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 14px;
+  border-radius: 999px;
+  box-shadow: 0 12px 28px rgba(108, 92, 231, 0.4);
+  z-index: 10;
+}
+
+/* 라운드 선택 */
+.wc-round-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.wc-round-picker__btn {
+  border: none;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+  padding: 18px 10px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.wc-round-picker__btn:active {
+  transform: scale(0.97);
+}
+
+/* 대결(매치) 화면 */
+.wc-match__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.wc-match__round {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.wc-match__count {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.wc-match__pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wc-match__item {
+  flex: 1;
+  border: none;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.wc-match__item:active {
+  transform: scale(0.97);
+}
+
+.wc-match__item img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+}
+
+.wc-match__label {
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.wc-match__vs {
+  flex: none;
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* 월드컵 우승 결과 (deck-result 스타일 재사용) */
+.wc-result__image {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  margin: 0 auto 14px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.wc-result__label {
+  font-size: 18px;
+  font-weight: 900;
+  margin-bottom: 20px;
+}
+
+/* 월드컵 만들기 폼 */
+.wc-submit__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wc-submit__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  box-shadow: var(--shadow-soft);
+}
+
+.wc-submit__row-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: var(--color-muted);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.wc-submit__row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wc-submit__row-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wc-submit__row-fields input[type="text"] {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+}
+
+.wc-submit__row-fields input[type="file"] {
+  font-size: 11px;
+}
+
+.wc-submit__row-remove {
+  border: none;
+  background: rgba(255, 84, 112, 0.1);
+  color: var(--color-a);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wc-submit__add-btn {
+  border: none;
+  background: var(--color-border);
+  color: var(--color-text);
+  font-weight: 700;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.wc-submit__done {
+  text-align: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 40px 24px;
+}
+
+.wc-submit__done-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+/* 관리자 - 월드컵 승인 썸네일 */
+.admin-wc__thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.admin-wc__thumbs img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.admin-wc__more {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+/* 월드컵 통계 진입 링크 */
+.wc-stats-link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  border: none;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--color-accent);
+  font-weight: 800;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+/* 월드컵 우승 통계 랭킹 아이템 (hall-list 스타일 재사용 + 썸네일) */
+.wc-stats__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-soft);
+  animation: hallRowIn 0.35s ease backwards;
+}
+
+.wc-stats__item.is-rank-1 {
+  background: linear-gradient(135deg, #fff7e6, #fff);
+  border: 1px solid #ffdf9b;
+}
+.wc-stats__item.is-rank-2 {
+  background: linear-gradient(135deg, #f4f6fa, #fff);
+  border: 1px solid #dde3ec;
+}
+.wc-stats__item.is-rank-3 {
+  background: linear-gradient(135deg, #fbf1e9, #fff);
+  border: 1px solid #ecd3bb;
+}
+
+.wc-stats__thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.wc-stats__winrate {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--color-accent);
+  flex: none;
+}
+
+/* 새 버전 배포 감지 배너 */
+.update-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(120deg, #a06cff, var(--color-accent));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.update-banner button {
+  border: none;
+  background: #fff;
+  color: var(--color-accent);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
 }

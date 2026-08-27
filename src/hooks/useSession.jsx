@@ -94,6 +94,34 @@ export function SessionProvider({ children }) {
     return () => clearInterval(t);
   }, []);
 
+  // 관리자가 다른 세션에서 무제한 이용권 등을 바꿔도 반영되도록 주기적으로 + 탭 복귀 시 프로필 재조회
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    const refresh = () => {
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setProfile(data);
+        });
+    };
+
+    const t = setInterval(refresh, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [session]);
+
   const isAdmin = session?.user?.email === ADMIN_EMAIL;
 
   const premium = isPremiumActive(profile);
@@ -193,6 +221,15 @@ export function SessionProvider({ children }) {
     return data; // { energy, cap }
   };
 
+  // 이상형 월드컵 입장 - 매치마다가 아니라 시작할 때 한 번만 에너지를 소모함.
+  // (프리미엄 유저는 서버 함수가 알아서 무료 처리)
+  const startWorldcupSession = async (cost = 10) => {
+    const { data, error } = await supabase.rpc("start_worldcup", { p_cost: cost }).single();
+    if (error) throw error;
+    setProfile((prev) => (prev ? { ...prev, energy: data.energy } : prev));
+    return data; // { energy, cap }
+  };
+
   const value = {
     session,
     user: session?.user || null,
@@ -211,6 +248,7 @@ export function SessionProvider({ children }) {
     castVote,
     claimAdEnergy,
     claimStreakBonus,
+    startWorldcupSession,
   };
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

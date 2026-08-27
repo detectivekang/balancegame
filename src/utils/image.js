@@ -66,15 +66,23 @@ const COVER_BUCKET = "question-set-covers";
  * 공개 URL을 반환한다.
  */
 export async function uploadCoverImage(supabase, file) {
+  return uploadImage(supabase, file, COVER_BUCKET, "covers");
+}
+
+/**
+ * 범용 이미지 업로드 - 리사이즈 후 지정한 버킷/폴더에 저장하고 공개 URL 반환.
+ * (월드컵처럼 이미지가 여러 장 올라가는 기능에서도 재사용)
+ */
+export async function uploadImage(supabase, file, bucket, folder = "uploads") {
   const blob = await resizeImageToBlob(file);
-  const path = `covers/${crypto.randomUUID()}.jpg`;
+  const path = `${folder}/${crypto.randomUUID()}.jpg`;
 
   const { error } = await supabase.storage
-    .from(COVER_BUCKET)
+    .from(bucket)
     .upload(path, blob, { contentType: "image/jpeg", upsert: false });
 
   if (error) throw error;
 
-  const { data } = supabase.storage.from(COVER_BUCKET).getPublicUrl(path);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }

@@ -10,6 +10,7 @@ import BalanceCard from "../components/BalanceCard";
 import PlayerStatusBar from "../components/PlayerStatusBar";
 import EnergyEmpty from "../components/EnergyEmpty";
 import AdFitBanner from "../components/AdFitBanner";
+import LoadingScreen from "../components/LoadingScreen";
 import { useSession } from "../hooks/useSession";
 
 function shuffle(arr) {
@@ -185,7 +186,7 @@ export default function Home() {
   };
 
   if (loading) {
-    return <p className="empty-state">문제를 불러오는 중...</p>;
+    return <LoadingScreen label="문제집을 불러오는 중" />;
   }
 
   const energyEmpty = player && player.currentEnergy <= 0;

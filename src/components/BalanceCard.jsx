@@ -4,16 +4,25 @@ import { useSession } from "../hooks/useSession";
 
 export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 문제 →" }) {
   const { user, castVote } = useSession();
-  const [choice, setChoice] = useState(null);
+  const [choice, setChoice] = useState(null); // 이번 플레이에서 고른 선택
+  const [previousChoice, setPreviousChoice] = useState(null); // 예전에 이 문제에 골랐던 선택 (있으면)
   const [votesA, setVotesA] = useState(q.votes_a || 0);
   const [votesB, setVotesB] = useState(q.votes_b || 0);
   const [checking, setChecking] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // 이 문제에 이미 투표했는지 서버에서 확인 (실제 로그인 기반이라 기기가 바뀌어도 정확함)
+  // 예전에 이 문제에 투표한 적 있는지 확인해서 "이전 선택" 안내용으로만 저장.
+  // (예전 투표가 있어도 화면은 바로 결과로 넘기지 않고 다시 풀 수 있게 함)
   useEffect(() => {
     let cancelled = false;
+    setChecking(true);
+    setChoice(null);
+    setPreviousChoice(null);
+    setVotesA(q.votes_a || 0);
+    setVotesB(q.votes_b || 0);
+    setErrorMsg(null);
+
     supabase
       .from("votes")
       .select("choice")
@@ -22,7 +31,7 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled) return;
-        if (data) setChoice(data.choice);
+        if (data) setPreviousChoice(data.choice);
         setChecking(false);
       });
     return () => {
@@ -39,6 +48,28 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
     if (voted || submitting) return;
     setSubmitting(true);
     setErrorMsg(null);
+
+    // 이미 예전에 투표한 문제를 다시 만난 경우 - XP/에너지는 다시 지급하지 않고
+    // "다시 풀어보기" 용도로만 최신 통계를 보여줌 (중복 집계 방지)
+    if (previousChoice) {
+      try {
+        const { data, error } = await supabase
+          .from("questions")
+          .select("votes_a, votes_b")
+          .eq("id", q.id)
+          .single();
+        if (!error && data) {
+          setVotesA(data.votes_a);
+          setVotesB(data.votes_b);
+        }
+      } catch (err) {
+        console.error("최신 통계 조회 실패:", err);
+      }
+      setChoice(side);
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const result = await castVote(q.id, side);
       setVotesA(result.votes_a);
@@ -62,12 +93,23 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
   };
 
   if (checking) {
-    return <div className="balance-card balance-card--loading">불러오는 중...</div>;
+    return (
+      <div className="balance-card balance-card--loading">
+        <div className="balance-card__loading-spinner" />
+      </div>
+    );
   }
+
+  const previousChoiceLabel = previousChoice === "A" ? q.option_a : previousChoice === "B" ? q.option_b : null;
 
   return (
     <div className="balance-card">
       <div className="balance-card__category">{q.category}</div>
+
+      {previousChoice && !voted && (
+        <div className="balance-card__replay-badge">🔁 예전에 풀어본 문제예요</div>
+      )}
+
       <h3 className="balance-card__question">{q.question}</h3>
 
       {errorMsg && <p className="balance-card__error">⚠️ {errorMsg}</p>}
@@ -113,8 +155,15 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
           </div>
 
           <p className="balance-result__meta">
-            지금까지 <b>{totalVotes.toLocaleString()}명</b> 참여했어요 (+1 XP)
+            지금까지 <b>{totalVotes.toLocaleString()}명</b> 참여했어요{!previousChoice && " (+1 XP)"}
           </p>
+
+          {previousChoiceLabel && (
+            <p className="balance-result__previous">
+              📌 예전엔 <b>"{previousChoiceLabel}"</b>을 선택했었어요
+              {previousChoice === choice ? " — 이번에도 같은 선택! 취향 확고하네요 😎" : " — 이번엔 마음이 바뀌었네요!"}
+            </p>
+          )}
         </div>
       )}
 

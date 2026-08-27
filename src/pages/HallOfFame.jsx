@@ -115,7 +115,11 @@ export default function HallOfFame() {
         ))}
       </div>
 
-      {loading && <p className="empty-state">랭킹을 불러오는 중...</p>}
+      {loading && (
+        <div className="hall-loading">
+          <div className="hall-loading__spinner" />
+        </div>
+      )}
 
       {!loading && ranking && ranking.length === 0 && (
         <p className="empty-state">아직 이 기간에 활동한 플레이어가 없어요.</p>

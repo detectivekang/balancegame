@@ -11,6 +11,7 @@ export default function AdminPlayers() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
+  const [toggleError, setToggleError] = useState(null);
 
   const loadPage = async (pageIndex) => {
     const from = pageIndex * PAGE_SIZE;
@@ -71,6 +72,7 @@ export default function AdminPlayers() {
   // 실 서비스에서는 결제 완료 웹훅에서 is_premium/premium_until을 채우는 방식으로 대체하면 됩니다.
   const togglePremium = async (player) => {
     setTogglingId(player.id);
+    setToggleError(null);
     const next = !player.isPremium;
     const { error } = await supabase
       .from("profiles")
@@ -79,6 +81,11 @@ export default function AdminPlayers() {
     setTogglingId(null);
     if (error) {
       console.error(error);
+      setToggleError(
+        error.message?.includes("column")
+          ? "is_premium 컬럼이 없어요. migration_005_leveling_and_premium.sql을 먼저 실행해주세요."
+          : `변경 실패: ${error.message}`
+      );
       return;
     }
     setPlayers((prev) => prev.map((p) => (p.id === player.id ? { ...p, isPremium: next } : p)));
@@ -89,6 +96,7 @@ export default function AdminPlayers() {
 
   return (
     <div className="admin-players">
+      {toggleError && <p className="admin-players__error">⚠️ {toggleError}</p>}
       <div className="admin-players__table-wrap">
         <table className="admin-players__table">
           <thead>
