@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useSession } from "../hooks/useSession";
 import AdFitBanner from "./AdFitBanner";
+import { generateBalanceShareCard, shareOrDownloadImage } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
@@ -61,21 +62,61 @@ function countMinorityPicks(answers) {
   }).length;
 }
 
-export default function DeckResult({ deckTitle, answers, xpEarned, onRestart, onOtherDecks, onHome }) {
+export default function DeckResult({
+  deckTitle,
+  answers,
+  xpEarned,
+  onRestart,
+  onOtherDecks,
+  onHome,
+  onCreateChemistryLink,
+}) {
   const { player } = useSession();
   const persona = pickPersona(answers);
   const minorityCount = useMemo(() => countMinorityPicks(answers), [answers]);
   const [shareState, setShareState] = useState("idle"); // idle | copied
+  const [chemistryState, setChemistryState] = useState("idle"); // idle | creating | shared | copied | error
 
   const shareText = `나는 "${persona.label}"! 🎯 "${deckTitle}" 문제집 결과 확인하고 너도 해봐 👉 ${SHARE_URL}`;
+  const minorityText =
+    minorityCount > 0 ? `😎 이 중 ${minorityCount}개는 소수의견을 선택했어요!` : null;
 
   const handleShare = async () => {
+    if (shareState === "generating") return;
+    setShareState("generating");
+
+    let blob = null;
+    try {
+      blob = await generateBalanceShareCard({
+        deckTitle,
+        personaLabel: persona.label,
+        personaDesc: persona.desc,
+        minorityText,
+        xpEarned,
+      });
+    } catch (err) {
+      console.error("공유 카드 이미지 생성 실패:", err);
+    }
+
+    if (blob) {
+      const result = await shareOrDownloadImage(blob, "balance-result.png", shareText);
+      if (result === "downloaded") {
+        setShareState("downloaded");
+        setTimeout(() => setShareState("idle"), 2500);
+      } else {
+        setShareState("idle");
+      }
+      return;
+    }
+
+    // 이미지 생성 자체가 실패한 경우 - 기존 텍스트 공유로 폴백
     if (navigator.share) {
       try {
         await navigator.share({ title: "밸런스게임 결과", text: shareText, url: SHARE_URL });
       } catch (err) {
-        // 사용자가 공유를 취소한 경우 등은 조용히 무시
+        // 취소 시 무시
       }
+      setShareState("idle");
       return;
     }
     try {
@@ -84,7 +125,45 @@ export default function DeckResult({ deckTitle, answers, xpEarned, onRestart, on
       setTimeout(() => setShareState("idle"), 2000);
     } catch (err) {
       console.error("공유 텍스트 복사 실패:", err);
+      setShareState("idle");
     }
+  };
+
+  const handleChemistryShare = async () => {
+    if (chemistryState === "creating" || !onCreateChemistryLink) return;
+    setChemistryState("creating");
+
+    let url = null;
+    try {
+      url = await onCreateChemistryLink();
+    } catch (err) {
+      console.error("궁합 링크 생성 실패:", err);
+      setChemistryState("error");
+      setTimeout(() => setChemistryState("idle"), 2000);
+      return;
+    }
+
+    const chemistryText = `친구야 나랑 "${deckTitle}" 궁합 테스트 해볼래? 같이 풀고 얼마나 취향 맞는지 보자 👉 ${url}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "취향 궁합 테스트", text: chemistryText, url });
+        setChemistryState("shared");
+      } catch (err) {
+        setChemistryState("idle");
+      }
+      setTimeout(() => setChemistryState("idle"), 2000);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(chemistryText);
+      setChemistryState("copied");
+    } catch (err) {
+      console.error("궁합 링크 복사 실패:", err);
+      setChemistryState("error");
+    }
+    setTimeout(() => setChemistryState("idle"), 2500);
   };
 
   return (
@@ -104,9 +183,26 @@ export default function DeckResult({ deckTitle, answers, xpEarned, onRestart, on
 
         <p className="deck-result__xp">+{xpEarned} XP 획득!</p>
 
-        <button className="deck-result__share-btn" onClick={handleShare}>
-          {shareState === "copied" ? "✅ 링크가 복사됐어요" : "📤 결과 공유하기"}
+        <button className="deck-result__share-btn" onClick={handleShare} disabled={shareState === "generating"}>
+          {shareState === "generating" && "이미지 만드는 중..."}
+          {shareState === "downloaded" && "✅ 이미지 저장됨! 공유해보세요"}
+          {shareState === "copied" && "✅ 링크가 복사됐어요"}
+          {shareState === "idle" && "📤 결과 공유하기"}
         </button>
+
+        {onCreateChemistryLink && (
+          <button
+            className="deck-result__chemistry-btn"
+            onClick={handleChemistryShare}
+            disabled={chemistryState === "creating"}
+          >
+            {chemistryState === "creating" && "링크 만드는 중..."}
+            {chemistryState === "shared" && "✅ 친구에게 보냈어요"}
+            {chemistryState === "copied" && "✅ 궁합 링크 복사됐어요"}
+            {chemistryState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
+            {chemistryState === "idle" && "👯 친구랑 궁합 테스트하기"}
+          </button>
+        )}
 
         <div className="deck-result__actions">
           <button className="deck-result__btn is-primary" onClick={onRestart}>

@@ -79,6 +79,7 @@ main {
   padding-right: 4px;
   border-right: 1px solid var(--color-border);
   margin-right: 2px;
+  text-decoration: none;
 }
 
 .app-header__nav a {
@@ -2597,5 +2598,283 @@ main {
   font-size: 12px;
   padding: 6px 14px;
   border-radius: 999px;
+  cursor: pointer;
+}
+
+/* 궁합 테스트 - 초대 인트로 */
+.chemistry-intro {
+  text-align: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 44px 24px;
+  margin-top: 40px;
+}
+
+.chemistry-intro__icon {
+  font-size: 44px;
+  margin-bottom: 10px;
+}
+
+.chemistry-intro h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+.chemistry-intro p {
+  font-size: 14px;
+  color: var(--color-muted);
+  line-height: 1.6;
+  margin: 0 0 26px;
+}
+
+/* 궁합 결과 */
+.deck-result__chemistry-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: linear-gradient(120deg, #ff8ac2, #d84a9c);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.chemistry-result__percent {
+  font-size: 56px;
+  font-weight: 900;
+  background: linear-gradient(120deg, #ff8ac2, var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.chemistry-result__emoji {
+  font-size: 34px;
+  margin-bottom: 6px;
+}
+
+.chemistry-result__detail {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 0 0 20px;
+}
+
+/* 앱 설치(PWA) 유도 배너 */
+.install-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  margin: 10px auto 0;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+}
+
+.install-prompt__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.install-prompt__text {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.install-prompt__install-btn {
+  flex-shrink: 0;
+  border: none;
+  background: linear-gradient(120deg, #a06cff, var(--color-accent));
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.install-prompt__close-btn {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* 마이페이지 */
+.mypage-profile {
+  background: linear-gradient(160deg, #2b1a52, #191932);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 22px 20px;
+  margin-bottom: 18px;
+}
+
+.mypage-profile__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.mypage-profile__tier {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.mypage-profile__nickname {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.mypage-profile__premium {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: #4a3200;
+  background: linear-gradient(120deg, #ffe9a8, #ffc93c);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.mypage-profile__level {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.mypage-profile__xp-label {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 6px;
+}
+
+.mypage-profile__meta {
+  margin-top: 14px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.mypage-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.mypage-stats__item {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+  padding: 14px 8px;
+  text-align: center;
+}
+
+.mypage-stats__value {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--color-accent);
+}
+
+.mypage-stats__label {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+.mypage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.mypage-list__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+.mypage-list__emoji {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.mypage-list__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-list__title {
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mypage-list__meta {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.mypage-list__status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mypage-list__status.is-approved {
+  background: rgba(62, 207, 158, 0.15);
+  color: #1a8f66;
+}
+
+.mypage-list__status.is-pending {
+  background: rgba(255, 201, 60, 0.2);
+  color: #9c7000;
+}
+
+.mypage-upgrade-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  background: linear-gradient(120deg, #ffe9a8, #ffc93c);
+  color: #4a3200;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.mypage-logout {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 12px;
   cursor: pointer;
 }

@@ -7,6 +7,7 @@ import LevelUpModal from "./components/LevelUpModal";
 import LoadingScreen from "./components/LoadingScreen";
 import ModeTabs from "./components/ModeTabs";
 import UpdateBanner from "./components/UpdateBanner";
+import InstallPrompt from "./components/InstallPrompt";
 import Home from "./pages/Home";
 import { SessionProvider, useSession } from "./hooks/useSession";
 import "./App.css";
@@ -25,6 +26,8 @@ const UpgradeFail = lazy(() =>
 );
 const WorldCup = lazy(() => import("./pages/WorldCup"));
 const WorldCupSubmit = lazy(() => import("./pages/WorldCupSubmit"));
+const ChemistryPage = lazy(() => import("./pages/ChemistryPage"));
+const MyPage = lazy(() => import("./pages/MyPage"));
 
 // /admin 은 카카오 로그인과 별개로 자체 이메일/비밀번호 로그인을 쓰기 때문에
 // 아래 PlayerArea의 "카카오 로그인 필요" 게이트 밖에 따로 둡니다.
@@ -39,6 +42,7 @@ function PlayerArea() {
     <>
       <Header />
       <ModeTabs />
+      <InstallPrompt />
       <main>
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
@@ -50,6 +54,8 @@ function PlayerArea() {
             <Route path="/upgrade/fail" element={<UpgradeFail />} />
             <Route path="/worldcup" element={<WorldCup />} />
             <Route path="/worldcup/submit" element={<WorldCupSubmit />} />
+            <Route path="/chemistry/:resultId" element={<ChemistryPage />} />
+            <Route path="/mypage" element={<MyPage />} />
           </Routes>
         </Suspense>
       </main>

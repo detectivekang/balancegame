@@ -12,7 +12,11 @@ export default function Header() {
         <span>밸런스게임</span>
       </Link>
       <nav className="app-header__nav">
-        {profile?.nickname && <span className="app-header__nickname">{profile.nickname}님</span>}
+        {profile?.nickname && (
+          <Link to="/mypage" className="app-header__nickname">
+            {profile.nickname}님
+          </Link>
+        )}
         <Link to="/submit">문제 등록</Link>
         <Link to="/hall-of-fame">명예의전당</Link>
         {isAdmin && <span className="app-header__nickname">관리자</span>}

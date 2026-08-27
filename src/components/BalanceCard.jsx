@@ -75,7 +75,7 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
       setVotesA(result.votes_a);
       setVotesB(result.votes_b);
       setChoice(side);
-      onVoted && onVoted(side, result.votes_a, result.votes_b);
+      onVoted && onVoted(side, result.votes_a, result.votes_b, q.id);
     } catch (err) {
       console.error("투표 반영 실패:", err);
       // 서버 함수(cast_vote)가 던지는 대표적인 원인들을 사람이 읽을 수 있는 메시지로 변환

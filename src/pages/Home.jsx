@@ -43,7 +43,7 @@ function buildFallbackDecks(questions) {
 }
 
 export default function Home() {
-  const { player } = useSession();
+  const { player, profile } = useSession();
   const [questions, setQuestions] = useState([]);
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,9 +161,32 @@ export default function Home() {
     setView("playing");
   };
 
-  const handleVoted = (side, votesA, votesB) => {
-    setSessionAnswers((prev) => [...prev, { side, votesA, votesB }]);
+  const handleVoted = (side, votesA, votesB, questionId) => {
+    setSessionAnswers((prev) => [...prev, { side, votesA, votesB, questionId }]);
     setXpEarned((prev) => prev + 1);
+  };
+
+  // 문제집 결과를 "친구랑 궁합 테스트" 링크로 저장 - 친구가 이 링크로 들어와서
+  // 같은 문제집을 풀면 답이 몇 % 겹치는지 비교해서 보여줌.
+  const createChemistryLink = async () => {
+    const payload = sessionAnswers
+      .filter((a) => a.questionId)
+      .map((a) => ({ question_id: a.questionId, choice: a.side }));
+    if (payload.length === 0) throw new Error("no answers to share");
+
+    const { data, error } = await supabase
+      .from("chemistry_results")
+      .insert({
+        set_id: activeDeck.id?.startsWith?.("fallback-") ? null : activeDeck.id,
+        user_id: profile?.id || null,
+        nickname_snapshot: profile?.nickname || "친구",
+        answers: payload,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return `${window.location.origin}${window.location.pathname}#/chemistry/${data.id}`;
   };
 
   const handleNext = () => {
@@ -227,6 +250,7 @@ export default function Home() {
           onRestart={() => startDeck(activeDeck)}
           onOtherDecks={() => goCategory(activeDeck.category)}
           onHome={goBrowse}
+          onCreateChemistryLink={createChemistryLink}
         />
       </div>
     );

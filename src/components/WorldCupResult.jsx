@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { generateWorldcupShareCard, shareOrDownloadImage } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
@@ -42,12 +43,40 @@ export default function WorldCupResult({ worldcupTitle, champion, roundSize, onR
   const shareText = `🏆 "${worldcupTitle}" ${roundSize}강 이상형 월드컵 우승은 "${champion.label}"! 너도 해봐 👉 ${SHARE_URL}`;
 
   const handleShare = async () => {
+    if (shareState === "generating") return;
+    setShareState("generating");
+
+    let blob = null;
+    try {
+      blob = await generateWorldcupShareCard({
+        worldcupTitle,
+        roundSize,
+        championLabel: champion.label,
+        championImageUrl: champion.image_url,
+      });
+    } catch (err) {
+      console.error("공유 카드 이미지 생성 실패:", err);
+    }
+
+    if (blob) {
+      const result = await shareOrDownloadImage(blob, "worldcup-result.png", shareText);
+      if (result === "downloaded") {
+        setShareState("downloaded");
+        setTimeout(() => setShareState("idle"), 2500);
+      } else {
+        setShareState("idle");
+      }
+      return;
+    }
+
+    // 이미지 생성 자체가 실패한 경우(이미지 CORS 등) - 기존 텍스트 공유로 폴백
     if (navigator.share) {
       try {
         await navigator.share({ title: "이상형 월드컵 결과", text: shareText, url: SHARE_URL });
       } catch (err) {
         // 취소 시 무시
       }
+      setShareState("idle");
       return;
     }
     try {
@@ -56,6 +85,7 @@ export default function WorldCupResult({ worldcupTitle, champion, roundSize, onR
       setTimeout(() => setShareState("idle"), 2000);
     } catch (err) {
       console.error("공유 텍스트 복사 실패:", err);
+      setShareState("idle");
     }
   };
 
@@ -71,8 +101,11 @@ export default function WorldCupResult({ worldcupTitle, champion, roundSize, onR
         <img className="wc-result__image" src={champion.image_url} alt={champion.label} />
         <div className="wc-result__label">{champion.label}</div>
 
-        <button className="deck-result__share-btn" onClick={handleShare}>
-          {shareState === "copied" ? "✅ 링크가 복사됐어요" : "📤 결과 공유하기"}
+        <button className="deck-result__share-btn" onClick={handleShare} disabled={shareState === "generating"}>
+          {shareState === "generating" && "이미지 만드는 중..."}
+          {shareState === "downloaded" && "✅ 이미지 저장됨! 공유해보세요"}
+          {shareState === "copied" && "✅ 링크가 복사됐어요"}
+          {shareState === "idle" && "📤 결과 공유하기"}
         </button>
 
         <div className="deck-result__actions">
