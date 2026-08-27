@@ -1,0 +1,17 @@
+{
+  "name": "밸런스&이상형 월드컵",
+  "short_name": "밸런스게임",
+  "description": "밸런스게임과 이상형 월드컵을 한 곳에서",
+  "start_url": "/balancegame/",
+  "scope": "/balancegame/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f5f9",
+  "theme_color": "#6c5ce7",
+  "icons": [
+    { "src": "/balancegame/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/balancegame/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/balancegame/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/balancegame/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
