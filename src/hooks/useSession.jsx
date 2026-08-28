@@ -176,9 +176,15 @@ export function SessionProvider({ children }) {
   const dismissLevelUp = () => setLevelUpInfo(null);
 
   const signInWithKakao = async () => {
+    // 카카오 로그인 후 돌아올 때 현재 해시 경로(#/chemistry/xxx 같은 초대 링크 등)를
+    // 그대로 유지해야 함. 예전에는 pathname까지만 넘겨서 초대 링크로 들어온 사람이
+    // 로그인하자마자 홈으로 이동해버리고 초대가 날아가는 문제가 있었음.
+    // (PKCE 방식이라 콜백에 ?code=... 쿼리스트링이 붙는 것뿐이라 해시 라우팅과 충돌 없음)
     await supabase.auth.signInWithOAuth({
       provider: "kakao",
-      options: { redirectTo: window.location.origin + window.location.pathname },
+      options: {
+        redirectTo: window.location.origin + window.location.pathname + window.location.hash,
+      },
     });
   };
 

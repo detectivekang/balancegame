@@ -3,19 +3,27 @@ import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 import ReportButton from "./ReportButton";
 
-export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 문제 →" }) {
+export default function BalanceCard({
+  q,
+  onNext,
+  onVoted,
+  nextLabel = "다음 문제 →",
+  recordVote = true, // false면 궁합 테스트처럼 에너지/XP 차감 및 전역 투표 기록 없이 로컬로만 채점
+}) {
   const { user, castVote } = useSession();
   const [choice, setChoice] = useState(null); // 이번 플레이에서 고른 선택
   const [previousChoice, setPreviousChoice] = useState(null); // 예전에 이 문제에 골랐던 선택 (있으면)
   const [votesA, setVotesA] = useState(q.votes_a || 0);
   const [votesB, setVotesB] = useState(q.votes_b || 0);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(recordVote);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
   // 예전에 이 문제에 투표한 적 있는지 확인해서 "이전 선택" 안내용으로만 저장.
   // (예전 투표가 있어도 화면은 바로 결과로 넘기지 않고 다시 풀 수 있게 함)
+  // recordVote=false(궁합 테스트 등)일 때는 실제 투표를 기록하지 않으므로 조회도 건너뜀.
   useEffect(() => {
+    if (!recordVote) return;
     let cancelled = false;
     setChecking(true);
     setChoice(null);
@@ -38,7 +46,7 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
     return () => {
       cancelled = true;
     };
-  }, [q.id, user.id]);
+  }, [q.id, user.id, recordVote]);
 
   const voted = Boolean(choice);
   const totalVotes = votesA + votesB;
@@ -47,6 +55,15 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
 
   const vote = async (side) => {
     if (voted || submitting) return;
+
+    // 궁합 테스트 등 recordVote=false 모드: 에너지도 안 쓰고 전역 투표에도 반영하지
+    // 않음. 이번 선택만 로컬로 기록해서 채점(onVoted)에 쓰고 끝.
+    if (!recordVote) {
+      setChoice(side);
+      onVoted && onVoted(side, votesA, votesB, q.id);
+      return;
+    }
+
     setSubmitting(true);
     setErrorMsg(null);
 
@@ -167,7 +184,7 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
           </div>
 
           <p className="balance-result__meta">
-            지금까지 <b>{totalVotes.toLocaleString()}명</b> 참여했어요{!previousChoice && " (+1 XP)"}
+            지금까지 <b>{totalVotes.toLocaleString()}명</b> 참여했어요{recordVote && !previousChoice && " (+1 XP)"}
           </p>
 
           {previousChoiceLabel && (

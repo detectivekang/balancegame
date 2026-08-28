@@ -15,6 +15,7 @@ export default function MyPage() {
   const [voteCount, setVoteCount] = useState(0);
   const [mySets, setMySets] = useState([]);
   const [myWorldcups, setMyWorldcups] = useState([]);
+  const [myChemistryInvites, setMyChemistryInvites] = useState([]);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [showVotesModal, setShowVotesModal] = useState(false);
@@ -24,7 +25,7 @@ export default function MyPage() {
     let cancelled = false;
 
     async function load() {
-      const [{ count: votes }, { data: sets }, { data: worldcups }] = await Promise.all([
+      const [{ count: votes }, { data: sets }, { data: worldcups }, { data: chemistryInvites }] = await Promise.all([
         supabase.from("votes").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase
           .from("question_sets")
@@ -36,23 +37,41 @@ export default function MyPage() {
           .select("*")
           .eq("creator_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase
+          .from("chemistry_results")
+          .select("id, set_id, created_at, question_sets(title)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
 
       const setIds = (sets || []).map((s) => s.id);
       const wcIds = (worldcups || []).map((w) => w.id);
+      const chemistryIds = (chemistryInvites || []).map((c) => c.id);
 
-      const [{ data: setQuestions }, { data: wcItems }] = await Promise.all([
+      const [{ data: setQuestions }, { data: wcItems }, { data: chemistryMatches }] = await Promise.all([
         setIds.length > 0
           ? supabase.from("questions").select("set_id").in("set_id", setIds)
           : Promise.resolve({ data: [] }),
         wcIds.length > 0
           ? supabase.from("worldcup_items").select("worldcup_id").in("worldcup_id", wcIds)
           : Promise.resolve({ data: [] }),
+        chemistryIds.length > 0
+          ? supabase
+              .from("chemistry_matches")
+              .select("chemistry_result_id, respondent_nickname, percent, matched, total, created_at")
+              .in("chemistry_result_id", chemistryIds)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
       ]);
 
       if (cancelled) return;
+
+      const matchesByInvite = {};
+      (chemistryMatches || []).forEach((m) => {
+        (matchesByInvite[m.chemistry_result_id] ||= []).push(m);
+      });
 
       const setCountMap = {};
       (setQuestions || []).forEach((q) => (setCountMap[q.set_id] = (setCountMap[q.set_id] || 0) + 1));
@@ -62,6 +81,14 @@ export default function MyPage() {
       setVoteCount(votes || 0);
       setMySets((sets || []).map((s) => ({ ...s, questionCount: setCountMap[s.id] || 0 })));
       setMyWorldcups((worldcups || []).map((w) => ({ ...w, itemCount: wcCountMap[w.id] || 0 })));
+      setMyChemistryInvites(
+        (chemistryInvites || []).map((c) => ({
+          id: c.id,
+          deckTitle: c.question_sets?.title || "삭제된 문제집",
+          createdAt: c.created_at,
+          matches: matchesByInvite[c.id] || [],
+        }))
+      );
       setLoading(false);
     }
 
@@ -202,6 +229,32 @@ export default function MyPage() {
               </div>
             </div>
             <span className={`mypage-list__status is-${w.status}`}>{STATUS_LABEL[w.status] || w.status}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="deck-row__title">👯 내가 만든 궁합 테스트</h3>
+      {myChemistryInvites.length === 0 && (
+        <p className="empty-state">아직 만든 궁합 테스트 초대가 없어요. 문제집을 풀고 결과 화면에서 만들어보세요!</p>
+      )}
+      <div className="mypage-list">
+        {myChemistryInvites.map((c) => (
+          <div key={c.id} className="mypage-list__item mypage-list__item--chemistry">
+            <span className="mypage-list__emoji">👯</span>
+            <div className="mypage-list__info">
+              <div className="mypage-list__title">{c.deckTitle}</div>
+              {c.matches.length === 0 ? (
+                <div className="mypage-list__meta">아직 아무도 안 풀었어요</div>
+              ) : (
+                <div className="mypage-chemistry__matches">
+                  {c.matches.map((m, i) => (
+                    <span key={i} className="mypage-chemistry__match">
+                      {m.respondent_nickname} · {m.percent}%
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

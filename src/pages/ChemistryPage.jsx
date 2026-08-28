@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
@@ -6,7 +6,6 @@ import BalanceCard from "../components/BalanceCard";
 import DeckProgress from "../components/DeckProgress";
 import ChemistryResult from "../components/ChemistryResult";
 import PlayerStatusBar from "../components/PlayerStatusBar";
-import EnergyEmpty from "../components/EnergyEmpty";
 import LoadingScreen from "../components/LoadingScreen";
 
 function shuffle(arr) {
@@ -21,7 +20,7 @@ function shuffle(arr) {
 export default function ChemistryPage() {
   const { resultId } = useParams();
   const navigate = useNavigate();
-  const { player, profile } = useSession();
+  const { user, profile } = useSession();
 
   const [status, setStatus] = useState("loading"); // loading | intro | playing | result | notfound
   const [invite, setInvite] = useState(null); // { setId, deckTitle, nickname, answers }
@@ -29,6 +28,7 @@ export default function ChemistryPage() {
   const [index, setIndex] = useState(0);
   const [myAnswers, setMyAnswers] = useState([]);
   const [linkState, setLinkState] = useState("idle");
+  const matchSavedRef = useRef(false); // 이 결과를 이미 저장했는지 (중복 저장 방지)
 
   useEffect(() => {
     let cancelled = false;
@@ -115,6 +115,27 @@ export default function ChemistryPage() {
 
   const percent = total > 0 ? Math.round((matched / total) * 100) : 0;
 
+  // 결과 화면에 도달하면 "누가 언제 몇 % 매칭이었는지"를 저장해서 초대한 사람도
+  // 나중에 마이페이지에서 확인할 수 있게 함. 같은 결과를 중복 저장하지 않도록 ref로 방지.
+  useEffect(() => {
+    if (status !== "result" || matchSavedRef.current || total === 0) return;
+    matchSavedRef.current = true;
+
+    supabase
+      .from("chemistry_matches")
+      .insert({
+        chemistry_result_id: resultId,
+        respondent_user_id: user?.id || null,
+        respondent_nickname: profile?.nickname || "친구",
+        matched,
+        total,
+        percent,
+      })
+      .then(({ error }) => {
+        if (error) console.error("궁합 결과 저장 실패:", error);
+      });
+  }, [status, resultId, user, profile, matched, total, percent]);
+
   const handleCreateNextLink = async () => {
     setLinkState("creating");
     try {
@@ -165,27 +186,6 @@ export default function ChemistryPage() {
     );
   }
 
-  const energyEmpty = player && player.currentEnergy <= 0 && !player.isPremium;
-
-  if (status === "intro") {
-    return (
-      <div className="page page--home">
-        <div className="chemistry-intro">
-          <div className="chemistry-intro__icon">👯</div>
-          <h2>{invite.nickname}님이 궁합 테스트에 초대했어요!</h2>
-          <p>
-            "{invite.deckTitle}" 문제집을 같이 풀고
-            <br />
-            취향이 얼마나 비슷한지 확인해봐요.
-          </p>
-          <button className="deck-result__btn is-primary" onClick={startPlaying}>
-            시작하기
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (status === "playing") {
     const current = queue[index];
     const isLast = index + 1 >= queue.length;
@@ -193,14 +193,14 @@ export default function ChemistryPage() {
       <div className="page page--home">
         <PlayerStatusBar />
         <DeckProgress title={`${invite.nickname}님과 궁합`} current={index} total={queue.length} onExit={() => navigate("/")} />
-        {energyEmpty && <EnergyEmpty />}
-        {!energyEmpty && current && (
+        {current && (
           <BalanceCard
             key={current.id}
             q={current}
             onNext={handleNext}
             onVoted={handleVoted}
             nextLabel={isLast ? "궁합 결과 보기 👯" : "다음 문제 →"}
+            recordVote={false}
           />
         )}
       </div>
