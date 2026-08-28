@@ -7,7 +7,7 @@
 -- ----------------------------------------------------------------------------
 -- 1. question_sets.cover_image_url: 문제집 카드 배경 사진 URL
 -- ----------------------------------------------------------------------------
-alter table question_sets add column cover_image_url text;
+alter table question_sets add column if not exists cover_image_url text;
 
 -- ----------------------------------------------------------------------------
 -- 2. Storage 버킷: 문제집 커버 이미지 저장용 (공개 읽기)

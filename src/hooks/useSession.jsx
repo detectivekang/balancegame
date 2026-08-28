@@ -27,6 +27,7 @@ export function SessionProvider({ children }) {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [streak, setStreak] = useState(0);
+  const [claimedMilestones, setClaimedMilestones] = useState([]);
   const [levelUpInfo, setLevelUpInfo] = useState(null); // { level } | null
   const prevLevelRef = useRef(null);
 
@@ -79,6 +80,15 @@ export function SessionProvider({ children }) {
             .gte("date", since.toISOString().slice(0, 10));
           if (!cancelled) {
             setStreak(computeStreak((activeDays || []).map((r) => r.date)));
+          }
+
+          // 이미 받은 출석 보너스 마일스톤 목록 (버튼을 다시 눌러 중복 요청하는 것을 막기 위함)
+          const { data: claims } = await supabase
+            .from("streak_bonus_claims")
+            .select("milestone")
+            .eq("user_id", userId);
+          if (!cancelled) {
+            setClaimedMilestones((claims || []).map((c) => c.milestone));
           }
         }
       });
@@ -192,6 +202,19 @@ export function SessionProvider({ children }) {
     setProfile(data);
   };
 
+  // 프로필 사진 URL 저장 (마이페이지에서 리사이즈된 이미지를 업로드한 뒤 호출)
+  const updateAvatar = async (avatarUrl) => {
+    const userId = session.user.id;
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", userId)
+      .select()
+      .single();
+    if (error) throw error;
+    setProfile(data);
+  };
+
   // 투표 1건 처리 - 서버 함수(cast_vote)가 에너지 체크/중복투표 방지/XP 지급까지 원자적으로 처리
   const castVote = async (questionId, choice) => {
     const { data, error } = await supabase
@@ -216,8 +239,17 @@ export function SessionProvider({ children }) {
   // 출석 스트릭 마일스톤(3/7/14/30일) 보너스 수령
   const claimStreakBonus = async (milestone) => {
     const { data, error } = await supabase.rpc("claim_streak_bonus", { p_milestone: milestone }).single();
-    if (error) throw error;
+    if (error) {
+      // 이미 받은 마일스톤(unique 제약 위반) - 화면에 계속 남아있던 버튼을 다시 눌렀을 때.
+      // 실패로 취급하지 않고 "이미 받음" 상태로 조용히 정리해서 버튼이 사라지게 함.
+      if (error.code === "23505") {
+        setClaimedMilestones((prev) => (prev.includes(milestone) ? prev : [...prev, milestone]));
+        return null;
+      }
+      throw error;
+    }
     setProfile((prev) => (prev ? { ...prev, energy: data.energy } : prev));
+    setClaimedMilestones((prev) => (prev.includes(milestone) ? prev : [...prev, milestone]));
     return data; // { energy, cap }
   };
 
@@ -239,12 +271,14 @@ export function SessionProvider({ children }) {
     needsProfileSetup: Boolean(session?.user) && profileLoaded && !profile,
     player,
     streak,
+    claimedMilestones,
     levelUpInfo,
     dismissLevelUp,
     signInWithKakao,
     signInAdmin,
     signOut,
     completeProfile,
+    updateAvatar,
     castVote,
     claimAdEnergy,
     claimStreakBonus,

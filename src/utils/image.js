@@ -60,6 +60,9 @@ export function resizeImageToBlob(file) {
 }
 
 const COVER_BUCKET = "question-set-covers";
+const AVATAR_BUCKET = "avatars";
+const AVATAR_SIZE = 128; // 프로필 사진은 카드 안에 작게만 표시되므로 아주 작게 저장
+const AVATAR_JPEG_QUALITY = 0.85;
 
 /**
  * 문제집 커버 이미지를 리사이즈해서 Supabase Storage에 업로드하고
@@ -67,6 +70,70 @@ const COVER_BUCKET = "question-set-covers";
  */
 export async function uploadCoverImage(supabase, file) {
   return uploadImage(supabase, file, COVER_BUCKET, "covers");
+}
+
+/**
+ * File(이미지)을 정사각형으로 가운데 크롭한 뒤 size x size 픽셀로 축소한
+ * JPEG Blob을 반환. 프로필 사진처럼 작고 동그랗게 표시되는 이미지에 사용.
+ */
+export function resizeImageToSquareBlob(file, size = AVATAR_SIZE) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const { width, height } = img;
+      const cropSize = Math.min(width, height);
+      const sx = (width - cropSize) / 2;
+      const sy = (height - cropSize) / 2;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, size, size);
+
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(objectUrl);
+          if (!blob) {
+            reject(new Error("이미지 변환에 실패했습니다."));
+            return;
+          }
+          resolve(blob);
+        },
+        "image/jpeg",
+        AVATAR_JPEG_QUALITY
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("이미지를 읽을 수 없습니다."));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * 프로필 사진을 128x128 정사각형으로 리사이즈해서 Supabase Storage에
+ * 업로드하고 공개 URL을 반환한다.
+ */
+export async function uploadAvatarImage(supabase, file) {
+  const blob = await resizeImageToSquareBlob(file, AVATAR_SIZE);
+  const path = `avatars/${crypto.randomUUID()}.jpg`;
+
+  const { error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
 /**

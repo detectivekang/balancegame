@@ -84,8 +84,8 @@ $$;
 -- 2. 리워드 광고 시청 / 출석 스트릭 보너스로 에너지를 지급하는 함수
 --    악용 방지를 위해 서버에서 하루 한도와 스트릭 조건을 직접 검증함.
 -- ----------------------------------------------------------------------------
-alter table profiles add column ad_bonus_date date;
-alter table profiles add column ad_bonus_count int not null default 0;
+alter table profiles add column if not exists ad_bonus_date date;
+alter table profiles add column if not exists ad_bonus_count int not null default 0;
 
 create table streak_bonus_claims (
   user_id uuid not null references profiles(id) on delete cascade,

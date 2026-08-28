@@ -7,7 +7,7 @@
 -- ----------------------------------------------------------------------------
 -- 1. question_sets.min_level: 이 레벨 이상이어야 플레이 가능 (기본 1 = 잠금 없음)
 -- ----------------------------------------------------------------------------
-alter table question_sets add column min_level int not null default 1;
+alter table question_sets add column if not exists min_level int not null default 1;
 
 -- ----------------------------------------------------------------------------
 -- 2. profiles: 무제한 이용권(프리미엄) 상태
@@ -15,5 +15,5 @@ alter table question_sets add column min_level int not null default 1;
 --    관리자가 "플레이어" 탭에서 수동으로 켜고 끄는 방식으로 동작합니다.
 --    premium_until이 null이면 무기한, 값이 있으면 그 시점까지만 유효.
 -- ----------------------------------------------------------------------------
-alter table profiles add column is_premium boolean not null default false;
-alter table profiles add column premium_until timestamptz;
+alter table profiles add column if not exists is_premium boolean not null default false;
+alter table profiles add column if not exists premium_until timestamptz;

@@ -11,7 +11,7 @@ function formatMinutes(ms) {
 }
 
 export default function PlayerStatusBar() {
-  const { player, streak, claimStreakBonus } = useSession();
+  const { player, streak, claimedMilestones, claimStreakBonus } = useSession();
   const [showAd, setShowAd] = useState(false);
   const [claimingMilestone, setClaimingMilestone] = useState(false);
 
@@ -20,7 +20,8 @@ export default function PlayerStatusBar() {
   const { level, tier, xp, progress, cap, currentEnergy, msUntilNext } = player;
   const percent = progress ? Math.min(100, Math.round((progress.current / progress.needed) * 100)) : 100;
   const energyFull = currentEnergy >= cap;
-  const reachedMilestone = STREAK_MILESTONES.includes(streak) ? streak : null;
+  const reachedMilestone =
+    STREAK_MILESTONES.includes(streak) && !claimedMilestones.includes(streak) ? streak : null;
   const upcoming = nextStreakMilestone(streak);
 
   const handleClaimStreak = async () => {

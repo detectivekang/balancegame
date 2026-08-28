@@ -1,18 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 import { MAX_LEVEL } from "../utils/levels";
+import { uploadAvatarImage } from "../utils/image";
 import LoadingScreen from "../components/LoadingScreen";
+import MyVotesModal from "../components/MyVotesModal";
 
 const STATUS_LABEL = { approved: "✅ 승인됨", pending: "⏳ 승인 대기" };
 
 export default function MyPage() {
-  const { user, profile, player, streak, signOut } = useSession();
+  const { user, profile, player, streak, signOut, updateAvatar } = useSession();
   const [loading, setLoading] = useState(true);
   const [voteCount, setVoteCount] = useState(0);
   const [mySets, setMySets] = useState([]);
   const [myWorldcups, setMyWorldcups] = useState([]);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState(null);
+  const [showVotesModal, setShowVotesModal] = useState(false);
+  const avatarInputRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +71,29 @@ export default function MyPage() {
     };
   }, [user.id]);
 
+  const handleAvatarClick = () => {
+    if (!avatarUploading) avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      // 아주 작은 정사각형(128px)으로 리사이즈해서 업로드
+      const avatarUrl = await uploadAvatarImage(supabase, file);
+      await updateAvatar(avatarUrl);
+    } catch (err) {
+      console.error("프로필 사진 업로드 실패:", err);
+      setAvatarError("사진 업로드에 실패했어요. 다시 시도해주세요.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   if (loading || !player) return <LoadingScreen label="마이페이지를 불러오는 중" />;
 
   const { level, tier, xp, progress, cap, currentEnergy, isPremium } = player;
@@ -74,12 +103,34 @@ export default function MyPage() {
     <div className="page page--home">
       <div className="mypage-profile">
         <div className="mypage-profile__top">
+          <button
+            type="button"
+            className="mypage-avatar"
+            onClick={handleAvatarClick}
+            disabled={avatarUploading}
+            title="프로필 사진 변경"
+          >
+            {profile.avatar_url ? (
+              <img className="mypage-avatar__img" src={profile.avatar_url} alt="" />
+            ) : (
+              <span className="mypage-avatar__placeholder">👤</span>
+            )}
+            <span className="mypage-avatar__edit">{avatarUploading ? "…" : "📷"}</span>
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleAvatarChange}
+          />
           <span className="mypage-profile__tier" style={{ background: tier.color }}>
             {tier.label}
           </span>
           <span className="mypage-profile__nickname">{profile.nickname}님</span>
           {isPremium && <span className="mypage-profile__premium">👑 무제한</span>}
         </div>
+        {avatarError && <p className="mypage-avatar__error">⚠️ {avatarError}</p>}
         <div className="mypage-profile__level">
           Lv.{level}
           {level >= MAX_LEVEL && " (MAX)"}
@@ -100,10 +151,15 @@ export default function MyPage() {
       </div>
 
       <div className="mypage-stats">
-        <div className="mypage-stats__item">
+        <button
+          type="button"
+          className="mypage-stats__item mypage-stats__item--clickable"
+          onClick={() => voteCount > 0 && setShowVotesModal(true)}
+          disabled={voteCount === 0}
+        >
           <div className="mypage-stats__value">{voteCount.toLocaleString()}</div>
           <div className="mypage-stats__label">총 참여 문제</div>
-        </div>
+        </button>
         <div className="mypage-stats__item">
           <div className="mypage-stats__value">{mySets.length}</div>
           <div className="mypage-stats__label">만든 문제집</div>
@@ -113,6 +169,8 @@ export default function MyPage() {
           <div className="mypage-stats__label">만든 월드컵</div>
         </div>
       </div>
+
+      {showVotesModal && <MyVotesModal userId={user.id} onClose={() => setShowVotesModal(false)} />}
 
       <h3 className="deck-row__title">📚 내가 만든 문제집</h3>
       {mySets.length === 0 && <p className="empty-state">아직 만든 문제집이 없어요.</p>}

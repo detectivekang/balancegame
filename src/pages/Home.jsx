@@ -69,7 +69,7 @@ export default function Home() {
 
       const { data: setData, error: setErr } = await supabase
         .from("question_sets")
-        .select("*, creator:profiles(nickname)");
+        .select("*, creator:profiles(nickname, avatar_url)");
 
       if (cancelled) return;
 
@@ -91,6 +91,7 @@ export default function Home() {
               questionCount: setQuestions.length,
               totalVotes,
               creatorName: set.creator?.nickname || "운영자",
+              creatorAvatar: set.creator?.avatar_url || null,
             };
           })
           .filter((d) => d.questionCount > 0);
@@ -225,6 +226,7 @@ export default function Home() {
           current={deckIndex}
           total={queue.length}
           onExit={goBrowse}
+          deckId={activeDeck.id?.startsWith?.("fallback-") ? null : activeDeck.id}
         />
         {energyEmpty && <EnergyEmpty />}
         {!energyEmpty && current && (

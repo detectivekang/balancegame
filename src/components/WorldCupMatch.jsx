@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ReportButton from "./ReportButton";
 
 export default function WorldCupMatch({ roundLabel, matchLabel, left, right, onPick }) {
   const [picking, setPicking] = useState(false);
@@ -17,17 +18,31 @@ export default function WorldCupMatch({ roundLabel, matchLabel, left, right, onP
       </div>
 
       <div className="wc-match__pair">
-        <button className="wc-match__item" onClick={() => pick(left, right)} disabled={picking}>
-          <img src={left.image_url} alt={left.label} />
-          <span className="wc-match__label">{left.label}</span>
-        </button>
+        <div className="wc-match__item-wrap">
+          <button className="wc-match__item" onClick={() => pick(left, right)} disabled={picking}>
+            <img src={left.image_url} alt={left.label} />
+            <span className="wc-match__label">{left.label}</span>
+          </button>
+          <ReportButton
+            className="wc-match__report"
+            label="🚩"
+            target={{ type: "worldcup_item", id: left.id, label: left.label, imageUrl: left.image_url }}
+          />
+        </div>
 
         <div className="wc-match__vs">VS</div>
 
-        <button className="wc-match__item" onClick={() => pick(right, left)} disabled={picking}>
-          <img src={right.image_url} alt={right.label} />
-          <span className="wc-match__label">{right.label}</span>
-        </button>
+        <div className="wc-match__item-wrap">
+          <button className="wc-match__item" onClick={() => pick(right, left)} disabled={picking}>
+            <img src={right.image_url} alt={right.label} />
+            <span className="wc-match__label">{right.label}</span>
+          </button>
+          <ReportButton
+            className="wc-match__report"
+            label="🚩"
+            target={{ type: "worldcup_item", id: right.id, label: right.label, imageUrl: right.image_url }}
+          />
+        </div>
       </div>
     </div>
   );

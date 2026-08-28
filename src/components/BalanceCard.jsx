@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
+import ReportButton from "./ReportButton";
 
 export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 문제 →" }) {
   const { user, castVote } = useSession();
@@ -81,12 +82,16 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
       // 서버 함수(cast_vote)가 던지는 대표적인 원인들을 사람이 읽을 수 있는 메시지로 변환
       const raw = err?.message || "";
       let friendly = "투표에 실패했어요. 잠시 후 다시 시도해주세요.";
+      let knownCause = true;
       if (raw.includes("not enough energy")) friendly = "에너지가 부족해요! 잠시 후 다시 시도해주세요.";
       else if (raw.includes("question not available"))
         friendly = "이 문제는 아직 승인되지 않았거나 삭제됐어요.";
       else if (raw.includes("not authenticated")) friendly = "로그인이 만료됐어요. 다시 로그인해주세요.";
       else if (raw.includes("duplicate key")) friendly = "이미 투표한 문제예요.";
-      setErrorMsg(friendly);
+      else knownCause = false;
+      // 알려진 원인이 아니면(서버쪽 실제 오류일 가능성) 원인 텍스트도 같이 보여줘서
+      // 나중에 캡처해서 문의하기 쉽게 함
+      setErrorMsg(knownCause || !raw ? friendly : `${friendly} (${raw})`);
     } finally {
       setSubmitting(false);
     }
@@ -104,7 +109,14 @@ export default function BalanceCard({ q, onNext, onVoted, nextLabel = "다음 �
 
   return (
     <div className="balance-card">
-      <div className="balance-card__category">{q.category}</div>
+      <div className="balance-card__top">
+        <div className="balance-card__category">{q.category}</div>
+        <ReportButton
+          className="balance-card__report"
+          label="🚩 신고"
+          target={{ type: "question", id: q.id, label: q.question }}
+        />
+      </div>
 
       {previousChoice && !voted && (
         <div className="balance-card__replay-badge">🔁 예전에 풀어본 문제예요</div>

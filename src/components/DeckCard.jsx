@@ -33,7 +33,11 @@ export default function DeckCard({ deck, onSelect, size = "md" }) {
       </div>
 
       <div className="deck-card__footer">
-        <span className="deck-card__author-avatar">👤</span>
+        {deck.creatorAvatar ? (
+          <img className="deck-card__author-avatar" src={deck.creatorAvatar} alt="" />
+        ) : (
+          <span className="deck-card__author-avatar">👤</span>
+        )}
         <span className="deck-card__author-name">{authorName}</span>
       </div>
     </button>

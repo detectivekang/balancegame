@@ -25,7 +25,11 @@ export default function WorldCupCard({ worldcup, onSelect, size = "grid" }) {
       </div>
 
       <div className="wc-card__footer">
-        <span className="wc-card__author-avatar">👤</span>
+        {worldcup.creatorAvatar ? (
+          <img className="wc-card__author-avatar" src={worldcup.creatorAvatar} alt="" />
+        ) : (
+          <span className="wc-card__author-avatar">👤</span>
+        )}
         <span className="wc-card__author-name">{authorName}</span>
       </div>
     </button>

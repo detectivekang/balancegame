@@ -10,6 +10,7 @@ import WorldCupRow from "../components/WorldCupRow";
 import LoadingScreen from "../components/LoadingScreen";
 import PlayerStatusBar from "../components/PlayerStatusBar";
 import EnergyEmpty from "../components/EnergyEmpty";
+import ReportButton from "../components/ReportButton";
 import { useSession } from "../hooks/useSession";
 
 // 매치마다가 아니라 월드컵 하나를 "입장"할 때 한 번만 소모되는 에너지.
@@ -62,7 +63,7 @@ export default function WorldCup() {
     async function load() {
       const { data: wcs, error: wcErr } = await supabase
         .from("worldcups")
-        .select("*, creator:profiles(nickname)")
+        .select("*, creator:profiles(nickname, avatar_url)")
         .eq("status", "approved");
       if (wcErr) console.error("월드컵 목록 로딩 실패:", wcErr);
 
@@ -84,6 +85,7 @@ export default function WorldCup() {
           return {
             ...w,
             creatorName: w.creator?.nickname || "운영자",
+            creatorAvatar: w.creator?.avatar_url || null,
             items: wcItems,
             itemCount: wcItems.length,
             coverImage: wcItems[0]?.image_url || null,
@@ -305,6 +307,11 @@ export default function WorldCup() {
         <button className="wc-stats-link" onClick={() => setView("stats")}>
           📊 역대 우승 통계 보기
         </button>
+        <ReportButton
+          className="wc-report-link"
+          label="🚩 이 월드컵 신고하기"
+          target={{ type: "worldcup", id: selected.id, label: selected.title }}
+        />
       </div>
     );
   }
