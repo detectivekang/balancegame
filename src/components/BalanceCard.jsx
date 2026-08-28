@@ -68,8 +68,14 @@ export default function BalanceCard({
     setErrorMsg(null);
 
     // 이미 예전에 투표한 문제를 다시 만난 경우 - XP/에너지는 다시 지급하지 않고
-    // "다시 풀어보기" 용도로만 최신 통계를 보여줌 (중복 집계 방지)
+    // "다시 풀어보기" 용도로만 최신 통계를 보여줌 (중복 집계 방지).
+    // 다만 이번 플레이 세션의 답변 목록(sessionAnswers)에는 반드시 포함시켜야
+    // 결과 화면의 페르소나/궁합 테스트 링크 생성이 정상 동작함
+    // (예전엔 여기서 onVoted를 안 불러서, 문제집 전체가 재도전이면 답변이 0개로
+    // 집계되어 "밸런스 요정"/0XP만 뜨고 궁합 링크 생성은 무조건 실패했음).
     if (previousChoice) {
+      let latestA = votesA;
+      let latestB = votesB;
       try {
         const { data, error } = await supabase
           .from("questions")
@@ -77,14 +83,17 @@ export default function BalanceCard({
           .eq("id", q.id)
           .single();
         if (!error && data) {
-          setVotesA(data.votes_a);
-          setVotesB(data.votes_b);
+          latestA = data.votes_a;
+          latestB = data.votes_b;
+          setVotesA(latestA);
+          setVotesB(latestB);
         }
       } catch (err) {
         console.error("최신 통계 조회 실패:", err);
       }
       setChoice(side);
       setSubmitting(false);
+      onVoted && onVoted(side, latestA, latestB, q.id);
       return;
     }
 
