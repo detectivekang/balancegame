@@ -6,19 +6,13 @@ const REASONS = ["부적절한 이미지/음란물", "저작권 침해", "폭력
 
 // target: { type: 'question'|'question_set'|'worldcup'|'worldcup_item', id, label, imageUrl? }
 export default function ReportModal({ target, onClose }) {
-  const { user, signInWithKakao } = useSession();
+  const { user } = useSession();
   const [reason, setReason] = useState(REASONS[0]);
   const [detail, setDetail] = useState("");
   const [status, setStatus] = useState("idle"); // idle | submitting | done | error
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // 궁합 테스트 초대 링크처럼 로그인 없이도 여는 화면에서 신고 버튼을 누르면
-    // user가 없어서 그대로 진행 시 오류가 남. 로그인부터 하도록 안내.
-    if (!user) {
-      signInWithKakao();
-      return;
-    }
     setStatus("submitting");
 
     const { error } = await supabase.from("reports").insert({
@@ -75,14 +69,12 @@ export default function ReportModal({ target, onClose }) {
 
             {status === "error" && <p className="balance-card__error">⚠️ 신고 접수에 실패했어요. 다시 시도해주세요.</p>}
 
-            {!user && <p className="report-modal__login-hint">신고하려면 먼저 로그인이 필요해요.</p>}
-
             <div className="report-modal__actions">
               <button type="button" className="report-modal__cancel" onClick={onClose}>
                 취소
               </button>
               <button type="submit" className="report-modal__submit" disabled={status === "submitting"}>
-                {!user ? "로그인하고 신고하기" : status === "submitting" ? "접수 중..." : "신고 접수"}
+                {status === "submitting" ? "접수 중..." : "신고 접수"}
               </button>
             </div>
           </form>

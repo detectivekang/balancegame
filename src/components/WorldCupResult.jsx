@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { useSession } from "../hooks/useSession";
 import { generateWorldcupShareCard, shareOrDownloadImage } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
-const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
 
 function Confetti() {
   const pieces = useMemo(
@@ -37,14 +38,56 @@ function Confetti() {
   );
 }
 
-export default function WorldCupResult({ worldcupTitle, champion, roundSize, onRestart, onOtherWorldcups, onHome }) {
-  const [shareState, setShareState] = useState("idle");
+export default function WorldCupResult({ worldcupId, worldcupTitle, champion, roundSize, onRestart, onOtherWorldcups, onHome }) {
+  const { profile } = useSession();
+  const [linkState, setLinkState] = useState("idle"); // idle | creating | shared | copied
+  const [imageState, setImageState] = useState("idle"); // idle | generating | downloaded
 
-  const shareText = `🏆 "${worldcupTitle}" ${roundSize}강 이상형 월드컵 우승은 "${champion.label}"! 너도 해봐 👉 ${SHARE_URL}`;
+  // 결과를 링크로 공유 - 받는 사람이 정적 이미지 한 장만 보고 끝나는 게 아니라,
+  // 클릭하면 결과 카드 페이지가 뜨고 거기서 바로 "나도 도전하기"로 이어지게 함.
+  const handleShareLink = async () => {
+    if (linkState === "creating") return;
+    setLinkState("creating");
 
-  const handleShare = async () => {
-    if (shareState === "generating") return;
-    setShareState("generating");
+    try {
+      const { data, error } = await supabase
+        .from("worldcup_results")
+        .insert({
+          worldcup_id: worldcupId,
+          champion_item_id: champion.id,
+          round_size: roundSize,
+          sharer_id: profile?.id || null,
+          sharer_nickname_snapshot: profile?.nickname || "친구",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      const url = `${window.location.origin}${window.location.pathname}#/worldcup/result/${data.id}`;
+      const text = `🏆 "${worldcupTitle}" ${roundSize}강 이상형 월드컵 우승은 "${champion.label}"! 너도 해봐 👉 ${url}`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "이상형 월드컵 결과", text, url });
+          setLinkState("shared");
+        } catch (err) {
+          setLinkState("idle");
+        }
+      } else {
+        await navigator.clipboard.writeText(text);
+        setLinkState("copied");
+      }
+    } catch (err) {
+      console.error("결과 링크 생성 실패:", err);
+      setLinkState("idle");
+    }
+    setTimeout(() => setLinkState("idle"), 2500);
+  };
+
+  // 인스타 스토리 등에 올리고 싶은 사람들을 위한 보조 옵션 - 이미지 한 장 저장/공유.
+  const handleSaveImage = async () => {
+    if (imageState === "generating") return;
+    setImageState("generating");
 
     let blob = null;
     try {
@@ -59,34 +102,12 @@ export default function WorldCupResult({ worldcupTitle, champion, roundSize, onR
     }
 
     if (blob) {
-      const result = await shareOrDownloadImage(blob, "worldcup-result.png", shareText);
-      if (result === "downloaded") {
-        setShareState("downloaded");
-        setTimeout(() => setShareState("idle"), 2500);
-      } else {
-        setShareState("idle");
-      }
-      return;
+      const result = await shareOrDownloadImage(blob, "worldcup-result.png", `"${champion.label}"이 우승했어요!`);
+      setImageState(result === "downloaded" ? "downloaded" : "idle");
+    } else {
+      setImageState("idle");
     }
-
-    // 이미지 생성 자체가 실패한 경우(이미지 CORS 등) - 기존 텍스트 공유로 폴백
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "이상형 월드컵 결과", text: shareText, url: SHARE_URL });
-      } catch (err) {
-        // 취소 시 무시
-      }
-      setShareState("idle");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setShareState("copied");
-      setTimeout(() => setShareState("idle"), 2000);
-    } catch (err) {
-      console.error("공유 텍스트 복사 실패:", err);
-      setShareState("idle");
-    }
+    setTimeout(() => setImageState("idle"), 2500);
   };
 
   return (
@@ -101,11 +122,17 @@ export default function WorldCupResult({ worldcupTitle, champion, roundSize, onR
         <img className="wc-result__image" src={champion.image_url} alt={champion.label} />
         <div className="wc-result__label">{champion.label}</div>
 
-        <button className="deck-result__share-btn" onClick={handleShare} disabled={shareState === "generating"}>
-          {shareState === "generating" && "이미지 만드는 중..."}
-          {shareState === "downloaded" && "✅ 이미지 저장됨! 공유해보세요"}
-          {shareState === "copied" && "✅ 링크가 복사됐어요"}
-          {shareState === "idle" && "📤 결과 공유하기"}
+        <button className="deck-result__share-btn" onClick={handleShareLink} disabled={linkState === "creating"}>
+          {linkState === "creating" && "결과 카드 만드는 중..."}
+          {linkState === "shared" && "✅ 친구에게 보냈어요"}
+          {linkState === "copied" && "✅ 결과 링크가 복사됐어요"}
+          {(linkState === "idle" || !linkState) && "📤 결과 공유하기 (링크)"}
+        </button>
+
+        <button className="wc-result__image-btn" onClick={handleSaveImage} disabled={imageState === "generating"}>
+          {imageState === "generating" && "이미지 만드는 중..."}
+          {imageState === "downloaded" && "✅ 이미지 저장됨"}
+          {(imageState === "idle" || !imageState) && "🖼️ 이미지로 저장 (인스타 스토리용)"}
         </button>
 
         <div className="deck-result__actions">

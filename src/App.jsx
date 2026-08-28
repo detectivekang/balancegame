@@ -27,6 +27,7 @@ const UpgradeFail = lazy(() =>
 const WorldCup = lazy(() => import("./pages/WorldCup"));
 const WorldCupSubmit = lazy(() => import("./pages/WorldCupSubmit"));
 const ChemistryPage = lazy(() => import("./pages/ChemistryPage"));
+const WorldCupResultPage = lazy(() => import("./pages/WorldCupResultPage"));
 const MyPage = lazy(() => import("./pages/MyPage"));
 
 // /admin 은 카카오 로그인과 별개로 자체 이메일/비밀번호 로그인을 쓰기 때문에
@@ -94,6 +95,17 @@ export default function App() {
             element={
               <Suspense fallback={<LoadingScreen />}>
                 <ChemistryPage />
+              </Suspense>
+            }
+          />
+          {/* 월드컵 결과 공유 링크도 같은 이유로 로그인 게이트 밖에 둠 - PNG 한 장이
+              아니라 클릭 가능한 결과 카드로, 로그인 없이 바로 보이고 "나도 도전하기"로
+              이어지게 함. */}
+          <Route
+            path="/worldcup/result/:resultId"
+            element={
+              <Suspense fallback={<LoadingScreen />}>
+                <WorldCupResultPage />
               </Suspense>
             }
           />

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { WORLDCUP_CATEGORIES, ROUND_SIZES, worldcupCategoryMeta } from "../data/worldcupCategories";
 import WorldCupCard from "../components/WorldCupCard";
 import WorldCupMatch from "../components/WorldCupMatch";
@@ -40,7 +40,8 @@ function roundLabelFor(itemCount, isFinal) {
 }
 
 export default function WorldCup() {
-  const { player, startWorldcupSession } = useSession();
+  const { player, profile, startWorldcupSession } = useSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [worldcups, setWorldcups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState(null);
@@ -95,6 +96,19 @@ export default function WorldCup() {
 
       setWorldcups(built);
       setLoading(false);
+
+      // "나도 도전하기" 링크(?play=worldcupId)로 들어온 경우, 그 월드컵을 자동으로 선택해서
+      // 목록에서 다시 찾아 누를 필요 없이 바로 강수 선택 화면으로 이동시킴.
+      const playId = searchParams.get("play");
+      if (playId) {
+        const target = built.find((w) => w.id === playId);
+        if (target) {
+          setSelected(target);
+          setEntryError(null);
+          setView("roundSelect");
+        }
+        setSearchParams({}, { replace: true });
+      }
     }
 
     load();
@@ -238,10 +252,6 @@ export default function WorldCup() {
           ✕ 나가기
         </button>
         <WorldCupMatch
-          // 매치가 바뀔 때마다 컴포넌트를 새로 마운트시켜서, 방금 고른 카드가
-          // 다음 매치에서도 계속 disabled(선택 불가) 상태로 남는 버그를 방지함.
-          // (WorldCupMatch 내부의 picking 상태가 리셋 안 되던 문제)
-          key={`${roundItemCount}-${matchIndex}`}
           roundLabel={roundLabelFor(roundItemCount, isFinal)}
           matchLabel={`${matchIndex + 1} / ${matches.length}`}
           left={left}
@@ -256,6 +266,7 @@ export default function WorldCup() {
     return (
       <div className="page page--home">
         <WorldCupResult
+          worldcupId={selected.id}
           worldcupTitle={selected.title}
           champion={champion}
           roundSize={roundSize}

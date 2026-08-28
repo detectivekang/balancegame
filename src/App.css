@@ -2412,6 +2412,29 @@ main {
   margin-bottom: 20px;
 }
 
+.wc-result__image-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 0 4px;
+  cursor: pointer;
+}
+
+.wc-result__image-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.wc-share__meta {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: -6px 0 14px;
+}
+
 /* 월드컵 만들기 폼 */
 .wc-submit__rows {
   display: flex;
@@ -2488,52 +2511,6 @@ main {
   padding: 12px;
   border-radius: var(--radius-md);
   cursor: pointer;
-}
-
-.wc-draft-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: rgba(108, 92, 231, 0.1);
-  color: var(--color-accent);
-  font-weight: 700;
-  font-size: 13px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  margin-bottom: 14px;
-}
-
-.wc-draft-banner__reset {
-  border: none;
-  background: none;
-  color: var(--color-a);
-  font-weight: 800;
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: underline;
-  flex-shrink: 0;
-}
-
-.wc-submit__actions {
-  display: flex;
-  gap: 8px;
-}
-
-.wc-submit__actions button {
-  flex: 1;
-}
-
-.wc-submit__draft-btn {
-  background: var(--color-border) !important;
-  color: var(--color-text) !important;
-}
-
-.wc-submit__draft-saved {
-  text-align: center;
-  font-size: 12px;
-  color: var(--color-muted);
-  margin-top: 8px;
 }
 
 .wc-submit__done {
@@ -2660,6 +2637,15 @@ main {
   cursor: pointer;
 }
 
+/* 궁합 테스트 페이지 - 로그인 게이트 밖(비로그인 게스트도 접근)이라 자체 브랜드 바 필요 */
+.chemistry-page__brand {
+  font-weight: 800;
+  font-size: 15px;
+  text-align: center;
+  padding: 16px 0 4px;
+  color: var(--color-text);
+}
+
 /* 궁합 테스트 - 초대 인트로 */
 .chemistry-intro {
   text-align: center;
@@ -2695,15 +2681,6 @@ main {
   font-weight: 700;
   color: var(--color-accent);
   margin-bottom: 26px;
-}
-
-/* 궁합 테스트 페이지 - 로그인 게이트 밖(비로그인 게스트도 접근)이라 자체 브랜드 바 필요 */
-.chemistry-page__brand {
-  font-weight: 800;
-  font-size: 15px;
-  text-align: center;
-  padding: 16px 0 4px;
-  color: var(--color-text);
 }
 
 /* 궁합 결과 - 상세보기 게이트(비로그인) */
@@ -3209,12 +3186,6 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.report-modal__login-hint {
-  font-size: 12px;
-  color: var(--color-muted);
-  margin: 4px 0 0;
 }
 
 .report-modal__label {
