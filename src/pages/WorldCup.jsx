@@ -238,6 +238,10 @@ export default function WorldCup() {
           ✕ 나가기
         </button>
         <WorldCupMatch
+          // 매치가 바뀔 때마다 컴포넌트를 새로 마운트시켜서, 방금 고른 카드가
+          // 다음 매치에서도 계속 disabled(선택 불가) 상태로 남는 버그를 방지함.
+          // (WorldCupMatch 내부의 picking 상태가 리셋 안 되던 문제)
+          key={`${roundItemCount}-${matchIndex}`}
           roundLabel={roundLabelFor(roundItemCount, isFinal)}
           matchLabel={`${matchIndex + 1} / ${matches.length}`}
           left={left}

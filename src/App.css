@@ -2490,6 +2490,52 @@ main {
   cursor: pointer;
 }
 
+.wc-draft-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(108, 92, 231, 0.1);
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+}
+
+.wc-draft-banner__reset {
+  border: none;
+  background: none;
+  color: var(--color-a);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  flex-shrink: 0;
+}
+
+.wc-submit__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.wc-submit__actions button {
+  flex: 1;
+}
+
+.wc-submit__draft-btn {
+  background: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.wc-submit__draft-saved {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 8px;
+}
+
 .wc-submit__done {
   text-align: center;
   background: var(--color-surface);
