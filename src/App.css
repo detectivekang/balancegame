@@ -2684,7 +2684,104 @@ main {
   font-size: 14px;
   color: var(--color-muted);
   line-height: 1.6;
-  margin: 0 0 26px;
+  margin: 0 0 18px;
+}
+
+.chemistry-intro__meta {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 26px;
+}
+
+/* 궁합 테스트 페이지 - 로그인 게이트 밖(비로그인 게스트도 접근)이라 자체 브랜드 바 필요 */
+.chemistry-page__brand {
+  font-weight: 800;
+  font-size: 15px;
+  text-align: center;
+  padding: 16px 0 4px;
+  color: var(--color-text);
+}
+
+/* 궁합 결과 - 상세보기 게이트(비로그인) */
+.chemistry-gate {
+  background: #f7f7fb;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin: 4px 0 16px;
+}
+
+.chemistry-gate__desc {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0 0 10px;
+}
+
+.chemistry-gate__btn {
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chemistry-gate__btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* 궁합 결과 - 상세 비교 목록(로그인 후) */
+.chemistry-detail {
+  text-align: left;
+  margin: 4px 0 16px;
+}
+
+.chemistry-detail__title {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.chemistry-detail__item {
+  background: #f7f7fb;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--color-border);
+}
+
+.chemistry-detail__item.is-match {
+  border-left-color: #3ecf9e;
+}
+
+.chemistry-detail__item.is-diff {
+  border-left-color: var(--color-a);
+}
+
+.chemistry-detail__question {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.chemistry-detail__answers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-muted);
+  flex-wrap: wrap;
+}
+
+.chemistry-detail__mark {
+  margin-left: auto;
+  font-size: 12px;
 }
 
 /* 궁합 결과 */
@@ -3112,6 +3209,12 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.report-modal__login-hint {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 4px 0 0;
 }
 
 .report-modal__label {

@@ -46,7 +46,7 @@ export default function BalanceCard({
     return () => {
       cancelled = true;
     };
-  }, [q.id, user.id, recordVote]);
+  }, [q.id, user?.id, recordVote]);
 
   const voted = Boolean(choice);
   const totalVotes = votesA + votesB;

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
@@ -17,18 +17,36 @@ function shuffle(arr) {
   return a;
 }
 
+const PENDING_KEY_PREFIX = "chemistry-pending-";
+
+// 로그인 없이도 볼 수 있는 작은 브랜드 바 - 이 페이지는 App.jsx에서 로그인 게이트
+// 밖에 있어서(초대받은 친구가 로그인 전에도 열 수 있어야 하므로) Header가 없음.
+function ChemistryLayout({ children }) {
+  return (
+    <div className="page page--home chemistry-page">
+      <div className="chemistry-page__brand">⚖️ 밸런스게임</div>
+      {children}
+    </div>
+  );
+}
+
 export default function ChemistryPage() {
   const { resultId } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useSession();
+  const { user, profile, signInWithKakao } = useSession();
 
   const [status, setStatus] = useState("loading"); // loading | intro | playing | result | notfound
-  const [invite, setInvite] = useState(null); // { setId, deckTitle, nickname, answers }
+  const [invite, setInvite] = useState(null); // { setId, deckTitle, nickname, answers, questions }
   const [queue, setQueue] = useState([]);
   const [index, setIndex] = useState(0);
   const [myAnswers, setMyAnswers] = useState([]);
   const [linkState, setLinkState] = useState("idle");
-  const matchSavedRef = useRef(false); // 이 결과를 이미 저장했는지 (중복 저장 방지)
+  const [detailUnlocked, setDetailUnlocked] = useState(false); // 로그인해서 상세 결과 볼 수 있는 상태
+  const [detailPending, setDetailPending] = useState(false); // "상세 결과 보기" 눌러서 로그인하러 가는 중
+  const matchSavedRef = useRef(false); // 궁합 결과를 이미 저장했는지 (중복 저장 방지)
+  const restoredRef = useRef(false); // 로그인 후 복귀 시 임시저장 답변을 이미 복원했는지
+
+  const pendingKey = `${PENDING_KEY_PREFIX}${resultId}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +116,29 @@ export default function ChemistryPage() {
     };
   }, [resultId]);
 
+  // 카카오 로그인은 페이지 전체가 이동했다 돌아오는 방식이라 React state가 다 날아감.
+  // "상세 결과 보기" 누르기 직전에 sessionStorage에 저장해둔 답변이 있으면 복원해서,
+  // 로그인하고 돌아온 친구가 처음부터 다시 풀지 않고 바로 결과로 이어지게 함.
+  useEffect(() => {
+    if (!invite || restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(pendingKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved?.answers?.length > 0) {
+          setMyAnswers(saved.answers);
+          setStatus("result");
+          if (user) setDetailUnlocked(true);
+        }
+      }
+    } catch (err) {
+      console.error("저장된 궁합 답변 복원 실패:", err);
+    } finally {
+      sessionStorage.removeItem(pendingKey);
+    }
+  }, [invite, user, pendingKey]);
+
   const startPlaying = () => {
     setQueue(shuffle(invite.questions));
     setIndex(0);
@@ -117,7 +158,7 @@ export default function ChemistryPage() {
     }
   };
 
-  const { matched, total } = React.useMemo(() => {
+  const { matched, total } = useMemo(() => {
     if (!invite) return { matched: 0, total: 0 };
     const originalMap = new Map(invite.answers.map((a) => [a.question_id, a.choice]));
     let m = 0;
@@ -133,10 +174,31 @@ export default function ChemistryPage() {
 
   const percent = total > 0 ? Math.round((matched / total) * 100) : 0;
 
-  // 결과 화면에 도달하면 "누가 언제 몇 % 매칭이었는지"를 저장해서 초대한 사람도
-  // 나중에 마이페이지에서 확인할 수 있게 함. 같은 결과를 중복 저장하지 않도록 ref로 방지.
+  // 문제별 상세 비교 목록 (상세 결과 보기 - 로그인해야 볼 수 있음)
+  const detailItems = useMemo(() => {
+    if (!invite) return [];
+    const originalMap = new Map(invite.answers.map((a) => [a.question_id, a.choice]));
+    const myMap = new Map(myAnswers.map((a) => [a.questionId, a.side]));
+    return invite.questions
+      .filter((q) => originalMap.has(q.id) && myMap.has(q.id))
+      .map((q) => {
+        const theirChoice = originalMap.get(q.id);
+        const myChoice = myMap.get(q.id);
+        return {
+          id: q.id,
+          question: q.question,
+          myLabel: myChoice === "A" ? q.option_a : q.option_b,
+          theirLabel: theirChoice === "A" ? q.option_a : q.option_b,
+          isMatch: myChoice === theirChoice,
+        };
+      });
+  }, [invite, myAnswers]);
+
+  // "상세 결과 보기"를 실제로 열람(=로그인된 상태로 unlocked)했을 때만 결과를 저장함.
+  // 익명으로 %만 보고 나간 방문자는 기록하지 않고, 로그인해서 제대로 참여한 사람만
+  // 초대한 사람의 마이페이지에 남도록 함.
   useEffect(() => {
-    if (status !== "result" || matchSavedRef.current || total === 0) return;
+    if (!detailUnlocked || matchSavedRef.current || total === 0) return;
     matchSavedRef.current = true;
 
     supabase
@@ -152,7 +214,23 @@ export default function ChemistryPage() {
       .then(({ error }) => {
         if (error) console.error("궁합 결과 저장 실패:", error);
       });
-  }, [status, resultId, user, profile, matched, total, percent]);
+  }, [detailUnlocked, resultId, user, profile, matched, total, percent]);
+
+  const handleViewDetail = () => {
+    if (user) {
+      setDetailUnlocked(true);
+      return;
+    }
+    // 비로그인 상태 - 카카오 로그인 보내기 전에 답변을 임시 저장해서
+    // 로그인 후 돌아왔을 때 이어서 상세 결과를 바로 볼 수 있게 함.
+    setDetailPending(true);
+    try {
+      sessionStorage.setItem(pendingKey, JSON.stringify({ answers: myAnswers }));
+    } catch (err) {
+      console.error("답변 임시 저장 실패:", err);
+    }
+    signInWithKakao();
+  };
 
   const handleCreateNextLink = async () => {
     setLinkState("creating");
@@ -195,12 +273,37 @@ export default function ChemistryPage() {
 
   if (status === "notfound") {
     return (
-      <div className="page page--home">
+      <ChemistryLayout>
         <p className="empty-state">이 링크는 사용할 수 없어요. (만료됐거나 잘못된 링크예요)</p>
         <button className="deck-result__btn is-primary" onClick={() => navigate("/")}>
           홈으로
         </button>
-      </div>
+      </ChemistryLayout>
+    );
+  }
+
+  if (status === "intro") {
+    const count = invite.questions.length;
+    const minutes = Math.max(1, Math.round((count * 8) / 60));
+    return (
+      <ChemistryLayout>
+        <div className="chemistry-intro">
+          <div className="chemistry-intro__icon">💌</div>
+          <h2>
+            {invite.nickname}님이 당신에게
+            <br />
+            밸런스게임을 보냈어요
+          </h2>
+          <p>두 사람의 궁합을 확인해보세요.</p>
+          <div className="chemistry-intro__meta">
+            <span>📝 {count}문제</span>
+            <span>⏱ 약 {minutes}분</span>
+          </div>
+          <button className="deck-result__btn is-primary" onClick={startPlaying}>
+            궁합 테스트 시작
+          </button>
+        </div>
+      </ChemistryLayout>
     );
   }
 
@@ -226,16 +329,20 @@ export default function ChemistryPage() {
   }
 
   return (
-    <div className="page page--home">
+    <ChemistryLayout>
       <ChemistryResult
         partnerName={invite.nickname}
         percent={percent}
         matched={matched}
         total={total}
+        detailItems={detailItems}
+        unlocked={detailUnlocked}
+        detailPending={detailPending}
+        onViewDetail={handleViewDetail}
         onCreateLink={handleCreateNextLink}
         onHome={() => navigate("/")}
         linkState={linkState}
       />
-    </div>
+    </ChemistryLayout>
   );
 }

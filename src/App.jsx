@@ -54,7 +54,6 @@ function PlayerArea() {
             <Route path="/upgrade/fail" element={<UpgradeFail />} />
             <Route path="/worldcup" element={<WorldCup />} />
             <Route path="/worldcup/submit" element={<WorldCupSubmit />} />
-            <Route path="/chemistry/:resultId" element={<ChemistryPage />} />
             <Route path="/mypage" element={<MyPage />} />
           </Routes>
         </Suspense>
@@ -86,6 +85,18 @@ export default function App() {
       <HashRouter>
         <Routes>
           <Route path="/admin" element={<AdminArea />} />
+          {/* 궁합 테스트 초대 링크는 로그인 없이 바로 열리고 풀 수 있어야 함(호기심 유지가
+              핵심). 상세 결과를 보거나 초대한 사람이 알 수 있게 기록하는 시점에만
+              ChemistryPage 안에서 자체적으로 로그인을 유도함. 그래서 PlayerArea의
+              "카카오 로그인 필요" 게이트 밖에 둠. */}
+          <Route
+            path="/chemistry/:resultId"
+            element={
+              <Suspense fallback={<LoadingScreen />}>
+                <ChemistryPage />
+              </Suspense>
+            }
+          />
           <Route path="/*" element={<PlayerArea />} />
         </Routes>
       </HashRouter>
