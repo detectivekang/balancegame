@@ -39,7 +39,7 @@ export default function MyPage() {
           .order("created_at", { ascending: false }),
         supabase
           .from("chemistry_results")
-          .select("id, set_id, created_at, question_sets(title)")
+          .select("id, set_id, category, created_at, question_sets(title)")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
       ]);
@@ -84,7 +84,7 @@ export default function MyPage() {
       setMyChemistryInvites(
         (chemistryInvites || []).map((c) => ({
           id: c.id,
-          deckTitle: c.question_sets?.title || "삭제된 문제집",
+          deckTitle: c.question_sets?.title || (c.category ? `${c.category} 모음집` : "삭제된 문제집"),
           createdAt: c.created_at,
           matches: matchesByInvite[c.id] || [],
         }))

@@ -175,10 +175,16 @@ export default function Home() {
       .map((a) => ({ question_id: a.questionId, choice: a.side }));
     if (payload.length === 0) throw new Error("no answers to share");
 
+    // "OO 모음집" 폴백 가상 문제집(아직 question_sets에 안 묶인 문제들)은 실제
+    // set row가 없어서 set_id를 null로 둘 수밖에 없음 - 대신 category를 저장해서
+    // 링크를 열 때 그 카테고리로 문제를 다시 찾아올 수 있게 함.
+    const isFallback = activeDeck.id?.startsWith?.("fallback-");
+
     const { data, error } = await supabase
       .from("chemistry_results")
       .insert({
-        set_id: activeDeck.id?.startsWith?.("fallback-") ? null : activeDeck.id,
+        set_id: isFallback ? null : activeDeck.id,
+        category: isFallback ? activeDeck.category : null,
         user_id: profile?.id || null,
         nickname_snapshot: profile?.nickname || "친구",
         answers: payload,

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "../lib/supabaseClient";
 import { CATEGORIES } from "../data/categories";
+import { useSession } from "../hooks/useSession";
 
 const REQUIRED_COLUMNS = ["카테고리", "문제", "선택지A", "선택지B"];
 
@@ -40,10 +41,13 @@ function downloadTemplate() {
 }
 
 export default function AdminExcelUpload() {
+  const { user } = useSession();
   const [rows, setRows] = useState([]);
   const [errors, setErrors] = useState([]);
   const [status, setStatus] = useState("idle"); // idle | parsed | uploading | done | error
   const [fileName, setFileName] = useState("");
+  const [setCreationErrors, setSetCreationErrors] = useState([]);
+  const [skippedCount, setSkippedCount] = useState(0);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -58,12 +62,25 @@ export default function AdminExcelUpload() {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      // raw: false - 엑셀이 셀을 "날짜"나 숫자로 자동 인식해버린 경우에도(예: 선택지에
+      // "3/4"처럼 입력했는데 엑셀이 날짜로 바꿔버린 경우) raw 값(JS Date/서수) 대신
+      // 화면에 실제로 보이는 문자열 그대로 읽어와서 이상한 값이 등록되는 걸 방지함.
+      const rawJson = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
 
-      if (json.length === 0) {
+      if (rawJson.length === 0) {
         setErrors(["엑셀에 데이터가 없습니다."]);
         return;
       }
+
+      // 헤더 셀에 눈에 안 보이는 공백이 있으면(복사/붙여넣기 시 흔함) 정상 컬럼인데도
+      // "필수 컬럼 누락"으로 잘못 뜨는 걸 방지하기 위해 헤더를 trim해서 다시 매핑
+      const json = rawJson.map((row) => {
+        const trimmed = {};
+        Object.keys(row).forEach((key) => {
+          trimmed[key.trim()] = row[key];
+        });
+        return trimmed;
+      });
 
       const header = Object.keys(json[0]);
       const missing = REQUIRED_COLUMNS.filter((c) => !header.includes(c));
@@ -128,13 +145,17 @@ export default function AdminExcelUpload() {
         map[key] = found.id;
         continue;
       }
+      // 버그 수정: creator_id를 안 넣으면 RLS(본인이 만든 것만 등록 가능) 정책에
+      // 막혀서 문제집 생성이 "조용히" 실패하고, 그 문제집에 속할 문제들이
+      // set_id 없이 등록돼버렸음. 관리자(현재 로그인 유저)를 creator로 지정.
       const { data: created, error: createError } = await supabase
         .from("question_sets")
-        .insert({ category, title })
+        .insert({ category, title, creator_id: user.id })
         .select()
         .single();
       if (createError) {
         console.error("문제집 생성 실패:", createError);
+        setSetCreationErrors((prev) => [...prev, `"${title}" 문제집 생성 실패: ${createError.message}`]);
         continue;
       }
       map[key] = created.id;
@@ -147,14 +168,39 @@ export default function AdminExcelUpload() {
   const handleUpload = async () => {
     if (rows.length === 0) return;
     setStatus("uploading");
+    setSetCreationErrors([]);
+    setSkippedCount(0);
 
     try {
-      const rowsNeedingSets = rows.filter((r) => r.setTitle);
+      // 버그 수정: 대용량 파일을 여러 청크로 나눠 올리다가 중간에 실패한 뒤
+      // 같은 파일을 다시 업로드하면, 이미 성공한 앞부분 청크가 통째로 중복
+      // 등록되는 문제가 있었음. 업로드 전에 (카테고리+문제+선택지A+선택지B)가
+      // 완전히 같은 문제가 이미 있으면 건너뛰도록 해서, 재업로드해도 안전하게 함.
+      const questionTexts = [...new Set(rows.map((r) => r.question))];
+      const existingKeys = new Set();
+      for (let i = 0; i < questionTexts.length; i += 500) {
+        const chunk = questionTexts.slice(i, i + 500);
+        const { data, error } = await supabase
+          .from("questions")
+          .select("category, question, option_a, option_b")
+          .in("question", chunk);
+        if (error) throw error;
+        (data || []).forEach((q) => {
+          existingKeys.add(`${q.category}|||${q.question}|||${q.option_a}|||${q.option_b}`);
+        });
+      }
+
+      const newRows = rows.filter(
+        (r) => !existingKeys.has(`${r.category}|||${r.question}|||${r.optionA}|||${r.optionB}`)
+      );
+      setSkippedCount(rows.length - newRows.length);
+
+      const rowsNeedingSets = newRows.filter((r) => r.setTitle);
       const setIdMap = await resolveSetIds(rowsNeedingSets);
 
       const chunkSize = 500;
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize).map((row) => ({
+      for (let i = 0; i < newRows.length; i += chunkSize) {
+        const chunk = newRows.slice(i, i + chunkSize).map((row) => ({
           category: row.category,
           set_id: row.setTitle ? setIdMap[`${row.category}|||${row.setTitle}`] || null : null,
           question: row.question,
@@ -171,7 +217,7 @@ export default function AdminExcelUpload() {
       setStatus("done");
     } catch (err) {
       console.error(err);
-      setErrors((prev) => [...prev, "업로드 중 오류가 발생했습니다."]);
+      setErrors((prev) => [...prev, "업로드 중 오류가 발생했습니다. 실패 지점 이전 문제들은 이미 등록되어 있으니, 같은 파일을 다시 업로드해도 중복 없이 이어서 등록됩니다."]);
       setStatus("error");
     }
   };
@@ -235,7 +281,26 @@ export default function AdminExcelUpload() {
         </>
       )}
 
-      {status === "done" && <p className="excel-upload__success">✅ 업로드가 완료되었습니다.</p>}
+      {setCreationErrors.length > 0 && (
+        <div className="excel-upload__errors">
+          {setCreationErrors.map((err, i) => (
+            <div key={i}>⚠ {err}</div>
+          ))}
+        </div>
+      )}
+
+      {status === "done" && setCreationErrors.length === 0 && (
+        <p className="excel-upload__success">
+          ✅ 업로드가 완료되었습니다.
+          {skippedCount > 0 && ` (이미 등록되어 있던 ${skippedCount}건은 중복이라 건너뛰었어요)`}
+        </p>
+      )}
+      {status === "done" && setCreationErrors.length > 0 && (
+        <p className="excel-upload__errors">
+          ⚠ 업로드는 완료됐지만, 위에 표시된 문제집은 생성에 실패해서 해당 문제들이 문제집 없이
+          등록됐어요. 관리자 페이지에서 수동으로 문제집을 만들고 문제를 옮겨주세요.
+        </p>
+      )}
     </div>
   );
 }

@@ -41,22 +41,40 @@ export default function ChemistryPage() {
         .maybeSingle();
 
       if (cancelled) return;
-      if (error || !result || !result.set_id) {
+      if (error || !result || (!result.set_id && !result.category)) {
         setStatus("notfound");
         return;
       }
 
-      const { data: set } = await supabase
-        .from("question_sets")
-        .select("title")
-        .eq("id", result.set_id)
-        .maybeSingle();
+      let deckTitle = "밸런스게임";
+      let questions;
 
-      const { data: questions } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("set_id", result.set_id)
-        .eq("status", "approved");
+      if (result.set_id) {
+        const { data: set } = await supabase
+          .from("question_sets")
+          .select("title")
+          .eq("id", result.set_id)
+          .maybeSingle();
+        deckTitle = set?.title || deckTitle;
+
+        const { data } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("set_id", result.set_id)
+          .eq("status", "approved");
+        questions = data;
+      } else {
+        // 폴백 가상 문제집("OO 모음집") - 아직 set에 안 묶인 그 카테고리 문제들을 다시 찾아옴
+        deckTitle = `${result.category} 모음집`;
+
+        const { data } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("category", result.category)
+          .eq("status", "approved")
+          .is("set_id", null);
+        questions = data;
+      }
 
       if (cancelled) return;
       if (!questions || questions.length === 0) {
@@ -66,7 +84,7 @@ export default function ChemistryPage() {
 
       setInvite({
         setId: result.set_id,
-        deckTitle: set?.title || "밸런스게임",
+        deckTitle,
         nickname: result.nickname_snapshot || "친구",
         answers: result.answers || [],
         questions,
