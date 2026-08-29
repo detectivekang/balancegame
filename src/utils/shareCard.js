@@ -174,6 +174,61 @@ export async function generateWorldcupShareCard({ worldcupTitle, roundSize, cham
 }
 
 /**
+ * 궁합 테스트 초대장 공유 카드 이미지 생성.
+ * (밸런스게임 결과 화면 / 궁합 테스트 결과 화면에서 "친구에게 보내기" 할 때 공통으로 씀)
+ */
+export async function generateChemistryInviteCard({ nickname, deckTitle, questionCount }) {
+  await ensureFontsReady();
+  const canvas = document.createElement("canvas");
+  canvas.width = CARD_WIDTH;
+  canvas.height = CARD_HEIGHT;
+  const ctx = canvas.getContext("2d");
+
+  drawGradientBackground(ctx, ["#3a1650", "#a3266b", "#ff5470"]);
+  ctx.textAlign = "center";
+
+  // 은은한 하트 장식
+  ctx.font = "120px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.fillText("💌", CARD_WIDTH / 2 - 300, 260);
+  ctx.fillText("💘", CARD_WIDTH / 2 + 300, 1500);
+
+  ctx.font = `800 90px ${FONT}`;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("💌", CARD_WIDTH / 2, 340);
+
+  ctx.font = `700 44px ${FONT}`;
+  ctx.fillStyle = "#ffe1ec";
+  wrapText(ctx, `${nickname}님이 보낸`, CARD_WIDTH / 2, 460, 880, 56);
+
+  ctx.font = `800 66px ${FONT}`;
+  ctx.fillStyle = "#ffffff";
+  wrapText(ctx, "취향 궁합 테스트", CARD_WIDTH / 2, 560, 920, 78);
+
+  ctx.font = `600 36px ${FONT}`;
+  ctx.fillStyle = "#ffd6e4";
+  wrapText(ctx, `"${deckTitle}"`, CARD_WIDTH / 2, 700, 880, 48);
+
+  if (questionCount) {
+    roundedRectPath(ctx, CARD_WIDTH / 2 - 220, 800, 440, 84, 42);
+    ctx.fillStyle = "rgba(255,255,255,0.16)";
+    ctx.fill();
+    ctx.font = `700 34px ${FONT}`;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(`📝 ${questionCount}문제 · 회원가입 없이 시작`, CARD_WIDTH / 2, 852);
+  }
+
+  ctx.font = `600 40px ${FONT}`;
+  ctx.fillStyle = "#ffffff";
+  wrapText(ctx, "얼마나 취향이 통하는지", CARD_WIDTH / 2, 1040, 880, 52);
+  wrapText(ctx, "지금 바로 확인해보세요 👇", CARD_WIDTH / 2, 1096, 880, 52);
+
+  drawFooter(ctx, window.location.origin + window.location.pathname);
+
+  return canvasToBlob(canvas);
+}
+
+/**
  * 생성된 이미지 Blob을 공유(가능하면 네이티브 공유 시트, 아니면 다운로드)한다.
  * 반환값: 'shared' | 'downloaded' | 'cancelled'
  */

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
+import { generateChemistryInviteCard, shareOrDownloadImage } from "../utils/shareCard";
 import BalanceCard from "../components/BalanceCard";
 import DeckProgress from "../components/DeckProgress";
 import ChemistryResult from "../components/ChemistryResult";
@@ -251,7 +252,21 @@ export default function ChemistryPage() {
       const url = `${window.location.origin}${window.location.pathname}#/chemistry/${data.id}`;
       const text = `친구야 나랑 "${invite.deckTitle}" 궁합 테스트 해볼래? 👉 ${url}`;
 
-      if (navigator.share) {
+      let blob = null;
+      try {
+        blob = await generateChemistryInviteCard({
+          nickname: profile?.nickname || "친구",
+          deckTitle: invite.deckTitle,
+          questionCount: invite.questions.length,
+        });
+      } catch (err) {
+        console.error("궁합 초대장 이미지 생성 실패:", err);
+      }
+
+      if (blob) {
+        const result = await shareOrDownloadImage(blob, "chemistry-invite.png", text);
+        setLinkState(result === "downloaded" ? "downloaded" : result === "shared" ? "shared" : "idle");
+      } else if (navigator.share) {
         try {
           await navigator.share({ title: "취향 궁합 테스트", text, url });
           setLinkState("shared");

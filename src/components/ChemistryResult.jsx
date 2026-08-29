@@ -61,8 +61,9 @@ export default function ChemistryResult({
 
         {unlocked && (
           <button className="deck-result__share-btn" onClick={onCreateLink} disabled={linkState === "creating"}>
-            {linkState === "creating" && "링크 만드는 중..."}
+            {linkState === "creating" && "카드 만드는 중..."}
             {linkState === "shared" && "✅ 다음 친구에게 보냈어요"}
+            {linkState === "downloaded" && "✅ 초대장 저장됨! 공유해보세요"}
             {linkState === "copied" && "✅ 궁합 링크 복사됐어요"}
             {(linkState === "idle" || !linkState) && "👯 나도 다른 친구랑 궁합 보기"}
           </button>

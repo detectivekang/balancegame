@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useSession } from "../hooks/useSession";
 import AdFitBanner from "./AdFitBanner";
-import { generateBalanceShareCard, shareOrDownloadImage } from "../utils/shareCard";
+import { generateBalanceShareCard, generateChemistryInviteCard, shareOrDownloadImage } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
@@ -71,7 +71,7 @@ export default function DeckResult({
   onHome,
   onCreateChemistryLink,
 }) {
-  const { player } = useSession();
+  const { player, profile } = useSession();
   const persona = pickPersona(answers);
   const minorityCount = useMemo(() => countMinorityPicks(answers), [answers]);
   const [shareState, setShareState] = useState("idle"); // idle | copied
@@ -145,6 +145,31 @@ export default function DeckResult({
 
     const chemistryText = `친구야 나랑 "${deckTitle}" 궁합 테스트 해볼래? 같이 풀고 얼마나 취향 맞는지 보자 👉 ${url}`;
 
+    let blob = null;
+    try {
+      blob = await generateChemistryInviteCard({
+        nickname: profile?.nickname || "친구",
+        deckTitle,
+        questionCount: answers.length,
+      });
+    } catch (err) {
+      console.error("궁합 초대장 이미지 생성 실패:", err);
+    }
+
+    if (blob) {
+      const result = await shareOrDownloadImage(blob, "chemistry-invite.png", chemistryText);
+      if (result === "downloaded") {
+        setChemistryState("downloaded");
+      } else if (result === "shared") {
+        setChemistryState("shared");
+      } else {
+        setChemistryState("idle");
+      }
+      setTimeout(() => setChemistryState("idle"), 2500);
+      return;
+    }
+
+    // 이미지 생성이 실패한 경우 - 기존 텍스트 공유로 폴백
     if (navigator.share) {
       try {
         await navigator.share({ title: "취향 궁합 테스트", text: chemistryText, url });
@@ -196,8 +221,9 @@ export default function DeckResult({
             onClick={handleChemistryShare}
             disabled={chemistryState === "creating"}
           >
-            {chemistryState === "creating" && "링크 만드는 중..."}
+            {chemistryState === "creating" && "카드 만드는 중..."}
             {chemistryState === "shared" && "✅ 친구에게 보냈어요"}
+            {chemistryState === "downloaded" && "✅ 초대장 저장됨! 공유해보세요"}
             {chemistryState === "copied" && "✅ 궁합 링크 복사됐어요"}
             {chemistryState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
             {chemistryState === "idle" && "👯 친구랑 궁합 테스트하기"}
