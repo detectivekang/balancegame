@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
-import { generateChemistryInviteCard, shareImageWithLink } from "../utils/shareCard";
+import { generateChemistryInviteCard, shareChemistryInvite } from "../utils/shareCard";
+import { trackEvent } from "../utils/analytics";
 import BalanceCard from "../components/BalanceCard";
 import DeckProgress from "../components/DeckProgress";
 import ChemistryResult from "../components/ChemistryResult";
@@ -178,6 +179,15 @@ export default function ChemistryPage() {
 
   const percent = total > 0 ? Math.round((matched / total) * 100) : 0;
 
+  // 테스트를 다 풀어서 %가 무료 공개되는 순간 (로그인 여부와 무관 - 이 시점엔
+  // 아직 비로그인 상태일 수 있음, 그래서 chemistry_matches insert와는 별개로 여기서 남김)
+  const testCompleteTrackedRef = useRef(false);
+  useEffect(() => {
+    if (status !== "result" || testCompleteTrackedRef.current || total === 0) return;
+    testCompleteTrackedRef.current = true;
+    trackEvent("chemistry_test_complete", { deck_title: invite?.deckTitle, percent, logged_in: Boolean(user) });
+  }, [status, total, percent, invite, user]);
+
   // 문제별 상세 비교 목록 (상세 결과 보기 - 로그인해야 볼 수 있음)
   const detailItems = useMemo(() => {
     if (!invite) return [];
@@ -204,6 +214,7 @@ export default function ChemistryPage() {
   useEffect(() => {
     if (!detailUnlocked || matchSavedRef.current || total === 0) return;
     matchSavedRef.current = true;
+    trackEvent("chemistry_detail_unlock", { deck_title: invite?.deckTitle, percent });
 
     supabase
       .from("chemistry_matches")
@@ -296,9 +307,21 @@ export default function ChemistryPage() {
       }
 
       if (blob) {
-        const result = await shareImageWithLink(blob, "chemistry-invite.png", text);
+        const result = await shareChemistryInvite(supabase, blob, "chemistry-invite.png", {
+          title: `${profile?.nickname || "친구"}님이 보낸 궁합 테스트`,
+          description: text,
+          linkUrl: url,
+          buttonLabel: "궁합 테스트 시작",
+        });
+        trackEvent("share", { method: result, content_type: "chemistry_next_invite" });
         setLinkState(
-          result === "shared" ? "shared-link-copied" : result === "downloaded" ? "downloaded-link-copied" : "link-copied"
+          result === "kakao"
+            ? "kakao"
+            : result === "shared"
+            ? "shared-link-copied"
+            : result === "downloaded"
+            ? "downloaded-link-copied"
+            : "link-copied"
         );
       } else if (navigator.share) {
         try {
@@ -337,9 +360,21 @@ export default function ChemistryPage() {
     }
 
     if (blob) {
-      const result = await shareImageWithLink(blob, "chemistry-group-invite.png", text);
+      const result = await shareChemistryInvite(supabase, blob, "chemistry-group-invite.png", {
+        title: `${invite.nickname}님의 그룹 궁합 테스트`,
+        description: text,
+        linkUrl: url,
+        buttonLabel: "궁합 테스트 시작",
+      });
+      trackEvent("share", { method: result, content_type: "chemistry_group_invite" });
       setGroupShareState(
-        result === "shared" ? "shared-link-copied" : result === "downloaded" ? "downloaded-link-copied" : "link-copied"
+        result === "kakao"
+          ? "kakao"
+          : result === "shared"
+          ? "shared-link-copied"
+          : result === "downloaded"
+          ? "downloaded-link-copied"
+          : "link-copied"
       );
     } else if (navigator.share) {
       try {

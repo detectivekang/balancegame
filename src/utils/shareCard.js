@@ -1,5 +1,6 @@
 // 결과를 "링크 텍스트"가 아니라 실제 카드 이미지로 만들어서 공유하기 위한 유틸.
 // 캔버스에 직접 그려서 PNG Blob을 만든다 (인스타 스토리/카톡 공유에 최적화된 9:16 비율).
+import { isKakaoShareConfigured, shareToKakaoTalk } from "./kakaoShare";
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1920;
@@ -226,6 +227,44 @@ export async function generateChemistryInviteCard({ nickname, deckTitle, questio
   drawFooter(ctx, window.location.origin + window.location.pathname);
 
   return canvasToBlob(canvas);
+}
+
+/**
+ * 카카오톡 "바로 공유"(Kakao.Share)용으로 카드 이미지를 Storage에 올리고
+ * 공개 URL을 돌려줌. (카카오 공유는 blob이 아니라 실제 접근 가능한 URL이 필요함)
+ */
+export async function uploadShareCard(supabase, blob) {
+  const path = `cards/${crypto.randomUUID()}.png`;
+  const { error } = await supabase.storage
+    .from("share-cards")
+    .upload(path, blob, { contentType: "image/png", upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from("share-cards").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * 궁합 초대장 공유의 "최선" 경로.
+ * 1) 카카오 JS 키가 설정돼있으면: 카드 이미지를 올리고 카카오톡 공유 시트를 바로 띄움
+ *    (다운로드 없이 링크+이미지가 통째로 카톡으로 감).
+ * 2) 카카오 공유가 안 되는 환경(키 미설정/실패)이면: 기존 방식(이미지 공유/다운로드 +
+ *    링크 클립보드 복사)으로 자동 대체함.
+ *
+ * 반환값: 'kakao' | 'shared' | 'downloaded' | 'cancelled' | 'link-copied'
+ */
+export async function shareChemistryInvite(supabase, blob, filename, { title, description, linkUrl, buttonLabel }) {
+  if (isKakaoShareConfigured()) {
+    try {
+      const imageUrl = await uploadShareCard(supabase, blob);
+      const result = await shareToKakaoTalk({ title, description, imageUrl, linkUrl, buttonLabel });
+      if (result === "shared") return "kakao";
+    } catch (err) {
+      console.error("카카오톡 공유 실패, 기존 방식으로 대체:", err);
+    }
+  }
+
+  const result = await shareImageWithLink(blob, filename, `${description} ${linkUrl}`);
+  return result === "cancelled" ? "link-copied" : result;
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   xpToNextLevel,
 } from "../utils/levels";
 import { computeStreak } from "../utils/streak";
+import { trackEvent } from "../utils/analytics";
 
 const SessionContext = createContext(null);
 
@@ -36,6 +37,7 @@ export function SessionProvider({ children }) {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      if (_event === "SIGNED_IN") trackEvent("login", { method: "kakao" });
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -206,6 +208,7 @@ export function SessionProvider({ children }) {
       .single();
     if (error) throw error;
     setProfile(data);
+    trackEvent("sign_up", { method: "kakao" }); // 프로필 생성 = 진짜 신규 가입 완료 시점
   };
 
   // 프로필 사진 URL 저장 (마이페이지에서 리사이즈된 이미지를 업로드한 뒤 호출)
@@ -239,6 +242,7 @@ export function SessionProvider({ children }) {
     const { data, error } = await supabase.rpc("claim_ad_energy").single();
     if (error) throw error;
     setProfile((prev) => (prev ? { ...prev, energy: data.energy } : prev));
+    trackEvent("ad_reward_claimed", { energy: data.energy });
     return data; // { energy, cap, remaining_today }
   };
 
@@ -261,8 +265,11 @@ export function SessionProvider({ children }) {
 
   // 이상형 월드컵 입장 - 매치마다가 아니라 시작할 때 한 번만 에너지를 소모함.
   // (프리미엄 유저는 서버 함수가 알아서 무료 처리)
-  const startWorldcupSession = async (cost = 10) => {
-    const { data, error } = await supabase.rpc("start_worldcup", { p_cost: cost }).single();
+  // worldcupId를 같이 넘기면 "실시간 인기 랭킹" 집계용으로 플레이 시각이 기록됨.
+  const startWorldcupSession = async (cost = 10, worldcupId = null) => {
+    const { data, error } = await supabase
+      .rpc("start_worldcup", { p_cost: cost, p_worldcup_id: worldcupId })
+      .single();
     if (error) throw error;
     setProfile((prev) => (prev ? { ...prev, energy: data.energy } : prev));
     return data; // { energy, cap }

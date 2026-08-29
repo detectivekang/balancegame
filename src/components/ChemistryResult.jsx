@@ -24,6 +24,7 @@ export default function ChemistryResult({
 
   const groupShareLabel = {
     creating: "카드 만드는 중...",
+    kakao: "✅ 카카오톡으로 보냈어요",
     "shared-link-copied": "✅ 링크 복사됨! 사진과 함께 붙여넣어주세요",
     "downloaded-link-copied": "✅ 사진 저장 + 링크 복사됨",
     "link-copied": "✅ 궁합 링크 복사됐어요",
@@ -115,6 +116,7 @@ export default function ChemistryResult({
         {unlocked && (
           <button className="deck-result__share-btn" onClick={onCreateLink} disabled={linkState === "creating"}>
             {linkState === "creating" && "카드 만드는 중..."}
+            {linkState === "kakao" && "✅ 카카오톡으로 보냈어요"}
             {linkState === "shared-link-copied" && "✅ 링크 복사됨! 사진과 함께 붙여넣어주세요"}
             {linkState === "downloaded-link-copied" && "✅ 사진 저장 + 링크 복사됨"}
             {linkState === "link-copied" && "✅ 궁합 링크 복사됐어요"}

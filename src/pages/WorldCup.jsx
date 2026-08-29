@@ -12,6 +12,7 @@ import PlayerStatusBar from "../components/PlayerStatusBar";
 import EnergyEmpty from "../components/EnergyEmpty";
 import ReportButton from "../components/ReportButton";
 import { useSession } from "../hooks/useSession";
+import { trackEvent } from "../utils/analytics";
 
 // 매치마다가 아니라 월드컵 하나를 "입장"할 때 한 번만 소모되는 에너지.
 // 한 번 내면 4강이든 256강이든 끝까지 자유롭게 플레이 가능.
@@ -45,6 +46,7 @@ export default function WorldCup() {
   const [worldcups, setWorldcups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState(null);
+  const [trendingWcIds, setTrendingWcIds] = useState([]); // 최근 24시간 플레이순 worldcup_id 목록
 
   const [view, setView] = useState("browse"); // browse | roundSelect | playing | result | stats
   const [selected, setSelected] = useState(null);
@@ -117,6 +119,23 @@ export default function WorldCup() {
     };
   }, []);
 
+  // 실시간 인기(최근 24시간 플레이 수 기준)
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .rpc("trending_worldcup_ids", { p_hours: 24, p_limit: 8 })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("실시간 인기 월드컵 조회 실패:", error);
+          return;
+        }
+        if (!cancelled) setTrendingWcIds((data || []).map((r) => r.worldcup_id));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filteredWorldcups = useMemo(
     () => (categoryFilter ? worldcups.filter((w) => w.category === categoryFilter) : worldcups),
     [worldcups, categoryFilter]
@@ -141,6 +160,17 @@ export default function WorldCup() {
     [worldcups]
   );
 
+  // 최근 24시간 플레이 수 기준 - 오래 쌓인 BEST와 다르게 "지금 당장" 인기있는 걸 보여줌
+  const trendingWorldcups = useMemo(() => {
+    const byId = {};
+    worldcups.forEach((w) => (byId[w.id] = w));
+    return trendingWcIds
+      .map((id) => byId[id])
+      .filter(Boolean)
+      .slice(0, 6)
+      .map((w) => ({ ...w, badge: "hot", badgeLabel: "HOT" }));
+  }, [worldcups, trendingWcIds]);
+
   const validRounds = useMemo(() => {
     if (!selected) return [];
     return ROUND_SIZES.filter((r) => r <= selected.itemCount);
@@ -157,16 +187,17 @@ export default function WorldCup() {
     setEntering(true);
     setEntryError(null);
 
-    if (!player?.isPremium) {
-      try {
-        await startWorldcupSession(WORLDCUP_ENTRY_COST);
-      } catch (err) {
-        console.error("월드컵 입장 실패:", err);
-        const raw = err?.message || "";
-        setEntryError(raw.includes("not enough energy") ? "energy" : "other");
-        setEntering(false);
-        return;
-      }
+    // premium 여부와 상관없이 항상 호출함 - start_worldcup 서버 함수가 premium이면
+    // 에너지 차감 없이 곧장 반환하도록 이미 처리돼있고, 이 호출 자체가 "실시간 인기
+    // 랭킹" 집계용 플레이 기록(worldcup_plays)도 같이 남기기 때문.
+    try {
+      await startWorldcupSession(WORLDCUP_ENTRY_COST, selected.id);
+    } catch (err) {
+      console.error("월드컵 입장 실패:", err);
+      const raw = err?.message || "";
+      setEntryError(raw.includes("not enough energy") ? "energy" : "other");
+      setEntering(false);
+      return;
     }
 
     const pool = shuffle(selected.items).slice(0, size);
@@ -178,6 +209,7 @@ export default function WorldCup() {
     setChampion(null);
     setEntering(false);
     setView("playing");
+    trackEvent("worldcup_play_start", { worldcup_title: selected.title, category: selected.category, round_size: size });
   };
 
   const handlePick = async (winner, loser) => {
@@ -226,6 +258,12 @@ export default function WorldCup() {
         };
       });
       setView("result");
+      trackEvent("worldcup_complete", {
+        worldcup_title: selected.title,
+        category: selected.category,
+        round_size: roundSize,
+        champion_label: nextWinners[0].label,
+      });
       return;
     }
 
@@ -336,7 +374,10 @@ export default function WorldCup() {
     <div className="page page--home">
       <PlayerStatusBar />
 
-      <WorldCupRow title="🔥 신규 월드컵" worldcups={newWorldcups} onSelect={selectWorldcup} />
+      <WorldCupRow title="🆕 신규 월드컵" worldcups={newWorldcups} onSelect={selectWorldcup} />
+      {trendingWorldcups.length > 0 && (
+        <WorldCupRow title="🔥 지금 뜨는 월드컵" worldcups={trendingWorldcups} onSelect={selectWorldcup} />
+      )}
       <WorldCupRow title="🏆 베스트 월드컵" worldcups={bestWorldcups} onSelect={selectWorldcup} />
 
       <div className="wc-category-filter">

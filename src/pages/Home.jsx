@@ -47,6 +47,7 @@ export default function Home() {
   const [questions, setQuestions] = useState([]);
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [trendingSetIds, setTrendingSetIds] = useState([]); // 최근 24시간 인기순 set_id 목록
 
   const [view, setView] = useState("browse"); // browse | category | playing | result
   const [category, setCategory] = useState(null);
@@ -114,6 +115,23 @@ export default function Home() {
     };
   }, []);
 
+  // 실시간 인기(최근 24시간 투표량 기준) - 개별 투표 내역은 안 보이고 집계만 받아옴
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .rpc("trending_deck_ids", { p_hours: 24, p_limit: 8 })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("실시간 인기 문제집 조회 실패:", error);
+          return;
+        }
+        if (!cancelled) setTrendingSetIds((data || []).map((r) => r.set_id));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const counts = useMemo(() => {
     const map = {};
     questions.forEach((q) => {
@@ -146,6 +164,18 @@ export default function Home() {
         .map((d) => ({ ...d, badge: "best", badgeLabel: "BEST" })),
     [unlockedDecks]
   );
+
+  // 최근 24시간 투표가 많은 순서 그대로 유지해서 노출 (오래 쌓인 BEST와 다르게
+  // 지금 당장 활발한 문제집이 위로 옴 - 신선함/화제성 위주)
+  const trendingDecks = useMemo(() => {
+    const byId = {};
+    unlockedDecks.forEach((d) => (byId[d.id] = d));
+    return trendingSetIds
+      .map((id) => byId[id])
+      .filter(Boolean)
+      .slice(0, 6)
+      .map((d) => ({ ...d, badge: "hot", badgeLabel: "HOT" }));
+  }, [unlockedDecks, trendingSetIds]);
 
   const categoryDecks = useMemo(
     () => unlockedDecks.filter((d) => d.category === category),
@@ -292,7 +322,10 @@ export default function Home() {
   return (
     <div className="page page--home">
       <PlayerStatusBar />
-      <DeckRow title="🔥 신규 문제집" decks={newDecks} onSelect={startDeck} />
+      <DeckRow title="🆕 신규 문제집" decks={newDecks} onSelect={startDeck} />
+      {trendingDecks.length > 0 && (
+        <DeckRow title="🔥 지금 뜨는 문제집" decks={trendingDecks} onSelect={startDeck} />
+      )}
       <DeckRow title="🏆 베스트 문제집" decks={bestDecks} onSelect={startDeck} />
       <CategoryGrid categories={CATEGORIES} counts={counts} onSelect={goCategory} />
       {!player?.isPremium && (

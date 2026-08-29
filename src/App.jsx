@@ -1,5 +1,5 @@
-import React, { Suspense, lazy } from "react";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import React, { Suspense, lazy, useEffect } from "react";
+import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import LoginScreen from "./components/LoginScreen";
 import ProfileSetupModal from "./components/ProfileSetupModal";
@@ -10,6 +10,7 @@ import UpdateBanner from "./components/UpdateBanner";
 import InstallPrompt from "./components/InstallPrompt";
 import Home from "./pages/Home";
 import { SessionProvider, useSession } from "./hooks/useSession";
+import { initAnalytics, trackPageView } from "./utils/analytics";
 import "./App.css";
 
 // 관리자 페이지/엑셀 업로드(xlsx 라이브러리 포함)처럼 대부분의 유저는 아예 안 여는 화면은
@@ -77,13 +78,29 @@ function AdminArea() {
   );
 }
 
+// HashRouter는 라우트가 바뀌어도 실제 페이지 로드가 안 일어나서, GA4가 자동으로
+// page_view를 못 잡음 - 그래서 라우트가 바뀔 때마다 직접 보내주는 역할만 하는
+// 화면 없는 컴포넌트. Router 컨텍스트 안(HashRouter 하위)에 있어야 함.
+function RouteTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView(location.pathname + location.hash);
+  }, [location.pathname, location.hash]);
+  return null;
+}
+
 export default function App() {
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
   return (
     <SessionProvider>
       {/* GitHub Pages는 새로고침 시 404가 나기 쉬워서 BrowserRouter 대신 HashRouter 사용.
           카카오 로그인은 PKCE(?code=) 방식이라 해시 라우팅과 충돌하지 않습니다. */}
       <UpdateBanner />
       <HashRouter>
+        <RouteTracker />
         <Routes>
           <Route path="/admin" element={<AdminArea />} />
           {/* 궁합 테스트 초대 링크는 로그인 없이 바로 열리고 풀 수 있어야 함(호기심 유지가

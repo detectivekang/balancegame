@@ -1429,6 +1429,11 @@ main {
   color: #4a3200;
 }
 
+.deck-card__badge.is-hot {
+  background: linear-gradient(120deg, #ff5470, #ff9a3c);
+  color: #fff;
+}
+
 .deck-card__body {
   position: relative;
   z-index: 1;
