@@ -41,6 +41,11 @@ export default function AdminWorldcups() {
       return;
     }
     setPending((prev) => prev.filter((p) => p.id !== wc.id));
+    // 알림 발송은 실패해도(구독 안 했거나 네트워크 문제 등) 승인 자체는 이미
+    // 끝난 상태라 그냥 로그만 남기고 넘어감.
+    supabase.functions.invoke("notify-worldcup-approved", { body: { worldcup_id: wc.id } }).catch((err) => {
+      console.error("승인 알림 발송 실패:", err);
+    });
   };
 
   const reject = async (id) => {

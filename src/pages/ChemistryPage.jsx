@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
-import { generateChemistryInviteCard, shareOrDownloadImage } from "../utils/shareCard";
+import { generateChemistryInviteCard, shareImageWithLink } from "../utils/shareCard";
 import BalanceCard from "../components/BalanceCard";
 import DeckProgress from "../components/DeckProgress";
 import ChemistryResult from "../components/ChemistryResult";
@@ -42,6 +42,9 @@ export default function ChemistryPage() {
   const [index, setIndex] = useState(0);
   const [myAnswers, setMyAnswers] = useState([]);
   const [linkState, setLinkState] = useState("idle");
+  const [groupBoard, setGroupBoard] = useState([]); // 같은 초대에 응답한 모두의 결과 (그룹 순위)
+  const [myMatchId, setMyMatchId] = useState(null);
+  const [groupShareState, setGroupShareState] = useState("idle");
   const [detailUnlocked, setDetailUnlocked] = useState(false); // 로그인해서 상세 결과 볼 수 있는 상태
   const [detailPending, setDetailPending] = useState(false); // "상세 결과 보기" 눌러서 로그인하러 가는 중
   const matchSavedRef = useRef(false); // 궁합 결과를 이미 저장했는지 (중복 저장 방지)
@@ -212,8 +215,37 @@ export default function ChemistryPage() {
         total,
         percent,
       })
-      .then(({ error }) => {
-        if (error) console.error("궁합 결과 저장 실패:", error);
+      .select()
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("궁합 결과 저장 실패:", error);
+          return;
+        }
+        if (data) setMyMatchId(data.id);
+
+        // 초대한 사람에게 "친구가 참여했어요" 알림 - 로그인된 상태에서만 의미가 있음
+        // (respondent_user_id가 있어야 notify-chemistry-match가 본인 응답인지 확인 가능)
+        if (user) {
+          supabase.functions.invoke("notify-chemistry-match", { body: { chemistry_result_id: resultId } }).catch((err) => {
+            console.error("궁합 알림 발송 실패:", err);
+          });
+
+          // 그룹 순위(단톡방 궁합) - 로그인 안 한 응답은 RLS상 남의 결과를 볼 수 없어서
+          // 로그인한 경우에만 불러옴
+          supabase
+            .from("chemistry_matches")
+            .select("id, respondent_nickname, percent, created_at")
+            .eq("chemistry_result_id", resultId)
+            .order("percent", { ascending: false })
+            .then(({ data: board, error: boardErr }) => {
+              if (boardErr) {
+                console.error("그룹 순위 조회 실패:", boardErr);
+                return;
+              }
+              setGroupBoard(board || []);
+            });
+        }
       });
   }, [detailUnlocked, resultId, user, profile, matched, total, percent]);
 
@@ -264,8 +296,10 @@ export default function ChemistryPage() {
       }
 
       if (blob) {
-        const result = await shareOrDownloadImage(blob, "chemistry-invite.png", text);
-        setLinkState(result === "downloaded" ? "downloaded" : result === "shared" ? "shared" : "idle");
+        const result = await shareImageWithLink(blob, "chemistry-invite.png", text);
+        setLinkState(
+          result === "shared" ? "shared-link-copied" : result === "downloaded" ? "downloaded-link-copied" : "link-copied"
+        );
       } else if (navigator.share) {
         try {
           await navigator.share({ title: "취향 궁합 테스트", text, url });
@@ -281,7 +315,48 @@ export default function ChemistryPage() {
       console.error("궁합 링크 생성 실패:", err);
       setLinkState("idle");
     }
-    setTimeout(() => setLinkState("idle"), 2500);
+    setTimeout(() => setLinkState("idle"), 3500);
+  };
+
+  // "이 링크 그대로" 그룹(단톡방)에 더 뿌려서 같은 순위판에 사람을 더 모으는 용도.
+  // handleCreateNextLink와 다르게 새 초대를 만들지 않고 지금 이 resultId 링크를 그대로 씀.
+  const handleShareGroup = async () => {
+    setGroupShareState("creating");
+    const url = `${window.location.origin}${window.location.pathname}`;
+    const text = `우리 그룹 궁합 테스트 중! "${invite.deckTitle}" 풀고 나랑 몇 % 나오는지 확인해봐 👉 ${url}`;
+
+    let blob = null;
+    try {
+      blob = await generateChemistryInviteCard({
+        nickname: invite.nickname,
+        deckTitle: invite.deckTitle,
+        questionCount: invite.questions.length,
+      });
+    } catch (err) {
+      console.error("그룹 궁합 초대장 이미지 생성 실패:", err);
+    }
+
+    if (blob) {
+      const result = await shareImageWithLink(blob, "chemistry-group-invite.png", text);
+      setGroupShareState(
+        result === "shared" ? "shared-link-copied" : result === "downloaded" ? "downloaded-link-copied" : "link-copied"
+      );
+    } else if (navigator.share) {
+      try {
+        await navigator.share({ title: "그룹 궁합 테스트", text, url });
+        setGroupShareState("shared");
+      } catch (err) {
+        setGroupShareState("idle");
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        setGroupShareState("copied");
+      } catch (err) {
+        setGroupShareState("idle");
+      }
+    }
+    setTimeout(() => setGroupShareState("idle"), 3500);
   };
 
   if (status === "loading") return <LoadingScreen label="궁합 테스트를 불러오는 중" />;
@@ -357,6 +432,10 @@ export default function ChemistryPage() {
         onCreateLink={handleCreateNextLink}
         onHome={() => navigate("/")}
         linkState={linkState}
+        groupBoard={groupBoard}
+        myMatchId={myMatchId}
+        onShareGroup={handleShareGroup}
+        groupShareState={groupShareState}
       />
     </ChemistryLayout>
   );

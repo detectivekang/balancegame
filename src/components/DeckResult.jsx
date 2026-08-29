@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useSession } from "../hooks/useSession";
 import AdFitBanner from "./AdFitBanner";
-import { generateBalanceShareCard, generateChemistryInviteCard, shareOrDownloadImage } from "../utils/shareCard";
+import { generateBalanceShareCard, generateChemistryInviteCard, shareOrDownloadImage, shareImageWithLink } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
@@ -157,15 +157,17 @@ export default function DeckResult({
     }
 
     if (blob) {
-      const result = await shareOrDownloadImage(blob, "chemistry-invite.png", chemistryText);
-      if (result === "downloaded") {
-        setChemistryState("downloaded");
-      } else if (result === "shared") {
-        setChemistryState("shared");
+      const result = await shareImageWithLink(blob, "chemistry-invite.png", chemistryText);
+      // shareImageWithLink는 결과와 상관없이 링크를 먼저 클립보드에 복사해두므로,
+      // 어떤 경우든 "링크 복사됨"을 알려서 붙여넣어 보내라고 안내함.
+      if (result === "shared") {
+        setChemistryState("shared-link-copied");
+      } else if (result === "downloaded") {
+        setChemistryState("downloaded-link-copied");
       } else {
-        setChemistryState("idle");
+        setChemistryState("link-copied");
       }
-      setTimeout(() => setChemistryState("idle"), 2500);
+      setTimeout(() => setChemistryState("idle"), 3500);
       return;
     }
 
@@ -222,6 +224,9 @@ export default function DeckResult({
             disabled={chemistryState === "creating"}
           >
             {chemistryState === "creating" && "카드 만드는 중..."}
+            {chemistryState === "shared-link-copied" && "✅ 링크 복사됨! 사진과 함께 붙여넣어주세요"}
+            {chemistryState === "downloaded-link-copied" && "✅ 사진 저장 + 링크 복사됨"}
+            {chemistryState === "link-copied" && "✅ 궁합 링크 복사됐어요"}
             {chemistryState === "shared" && "✅ 친구에게 보냈어요"}
             {chemistryState === "downloaded" && "✅ 초대장 저장됨! 공유해보세요"}
             {chemistryState === "copied" && "✅ 궁합 링크 복사됐어요"}

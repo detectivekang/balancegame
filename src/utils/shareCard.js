@@ -254,3 +254,26 @@ export async function shareOrDownloadImage(blob, filename, shareText) {
   URL.revokeObjectURL(url);
   return "downloaded";
 }
+
+/**
+ * 궁합 초대장처럼 "이미지 + 반드시 전달돼야 하는 링크"를 함께 보낼 때 씀.
+ *
+ * 문제: navigator.share({ files, text })로 이미지랑 텍스트를 같이 보내면,
+ * 카카오톡 등 일부 공유 대상 앱이 이미지만 받고 text는 그냥 버림 - 그래서
+ * "이미지만 가고 링크(글자)는 안 간다"는 문제가 생김. 이건 OS/브라우저
+ * 공유 시트의 알려진 동작이라 프론트에서 완전히 막을 방법이 없음.
+ *
+ * 그래서 안전하게: 링크가 포함된 텍스트를 항상 먼저 클립보드에 복사해두고
+ * (공유 성공/실패/취소와 무관하게), 그 다음에 이미지 공유를 시도함.
+ * 이러면 공유 앱이 텍스트를 버려도 사용자가 "붙여넣기"만 하면 링크를 보낼 수 있음.
+ *
+ * 반환값: 'shared' | 'downloaded' | 'cancelled' (링크는 이 호출 전에 이미 복사 시도됨)
+ */
+export async function shareImageWithLink(blob, filename, shareText) {
+  try {
+    await navigator.clipboard.writeText(shareText);
+  } catch (err) {
+    console.error("링크 클립보드 복사 실패:", err);
+  }
+  return shareOrDownloadImage(blob, filename, shareText);
+}
