@@ -295,50 +295,29 @@ export default function ChemistryPage() {
       const url = `${window.location.origin}${window.location.pathname}#/chemistry/${data.id}`;
       const text = `친구야 나랑 "${invite.deckTitle}" 궁합 테스트 해볼래? 👉 ${url}`;
 
-      let blob = null;
-      try {
-        blob = await generateChemistryInviteCard({
-          nickname: profile?.nickname || "친구",
-          deckTitle: invite.deckTitle,
-          questionCount: invite.questions.length,
-        });
-      } catch (err) {
-        console.error("궁합 초대장 이미지 생성 실패:", err);
-      }
-
-      if (blob) {
-        const result = await shareChemistryInvite(supabase, blob, "chemistry-invite.png", {
+      const result = await shareChemistryInvite(
+        supabase,
+        () =>
+          generateChemistryInviteCard({
+            nickname: profile?.nickname || "친구",
+            deckTitle: invite.deckTitle,
+            questionCount: invite.questions.length,
+          }),
+        "chemistry-invite.png",
+        {
           title: `${profile?.nickname || "친구"}님이 보낸 궁합 테스트`,
           description: text,
           linkUrl: url,
           buttonLabel: "궁합 테스트 시작",
-        });
-        trackEvent("share", { method: result, content_type: "chemistry_next_invite" });
-        setLinkState(
-          result === "kakao"
-            ? "kakao"
-            : result === "shared"
-            ? "shared-link-copied"
-            : result === "downloaded"
-            ? "downloaded-link-copied"
-            : "link-copied"
-        );
-      } else if (navigator.share) {
-        try {
-          await navigator.share({ title: "취향 궁합 테스트", text, url });
-          setLinkState("shared");
-        } catch (err) {
-          setLinkState("idle");
         }
-      } else {
-        await navigator.clipboard.writeText(text);
-        setLinkState("copied");
-      }
+      );
+      trackEvent("share", { method: result, content_type: "chemistry_next_invite" });
+      setLinkState(result === "link-copied" ? "copied" : result === "cancelled" ? "idle" : result);
     } catch (err) {
       console.error("궁합 링크 생성 실패:", err);
       setLinkState("idle");
     }
-    setTimeout(() => setLinkState("idle"), 3500);
+    setTimeout(() => setLinkState("idle"), 3000);
   };
 
   // "이 링크 그대로" 그룹(단톡방)에 더 뿌려서 같은 순위판에 사람을 더 모으는 용도.
@@ -348,50 +327,25 @@ export default function ChemistryPage() {
     const url = `${window.location.origin}${window.location.pathname}`;
     const text = `우리 그룹 궁합 테스트 중! "${invite.deckTitle}" 풀고 나랑 몇 % 나오는지 확인해봐 👉 ${url}`;
 
-    let blob = null;
-    try {
-      blob = await generateChemistryInviteCard({
-        nickname: invite.nickname,
-        deckTitle: invite.deckTitle,
-        questionCount: invite.questions.length,
-      });
-    } catch (err) {
-      console.error("그룹 궁합 초대장 이미지 생성 실패:", err);
-    }
-
-    if (blob) {
-      const result = await shareChemistryInvite(supabase, blob, "chemistry-group-invite.png", {
+    const result = await shareChemistryInvite(
+      supabase,
+      () =>
+        generateChemistryInviteCard({
+          nickname: invite.nickname,
+          deckTitle: invite.deckTitle,
+          questionCount: invite.questions.length,
+        }),
+      "chemistry-group-invite.png",
+      {
         title: `${invite.nickname}님의 그룹 궁합 테스트`,
         description: text,
         linkUrl: url,
         buttonLabel: "궁합 테스트 시작",
-      });
-      trackEvent("share", { method: result, content_type: "chemistry_group_invite" });
-      setGroupShareState(
-        result === "kakao"
-          ? "kakao"
-          : result === "shared"
-          ? "shared-link-copied"
-          : result === "downloaded"
-          ? "downloaded-link-copied"
-          : "link-copied"
-      );
-    } else if (navigator.share) {
-      try {
-        await navigator.share({ title: "그룹 궁합 테스트", text, url });
-        setGroupShareState("shared");
-      } catch (err) {
-        setGroupShareState("idle");
       }
-    } else {
-      try {
-        await navigator.clipboard.writeText(text);
-        setGroupShareState("copied");
-      } catch (err) {
-        setGroupShareState("idle");
-      }
-    }
-    setTimeout(() => setGroupShareState("idle"), 3500);
+    );
+    trackEvent("share", { method: result, content_type: "chemistry_group_invite" });
+    setGroupShareState(result === "link-copied" ? "copied" : result === "cancelled" ? "idle" : result);
+    setTimeout(() => setGroupShareState("idle"), 3000);
   };
 
   if (status === "loading") return <LoadingScreen label="궁합 테스트를 불러오는 중" />;

@@ -153,58 +153,30 @@ export default function DeckResult({
 
     const chemistryText = `친구야 나랑 "${deckTitle}" 궁합 테스트 해볼래? 같이 풀고 얼마나 취향 맞는지 보자 👉 ${url}`;
 
-    let blob = null;
-    try {
-      blob = await generateChemistryInviteCard({
-        nickname: profile?.nickname || "친구",
-        deckTitle,
-        questionCount: answers.length,
-      });
-    } catch (err) {
-      console.error("궁합 초대장 이미지 생성 실패:", err);
-    }
-
-    if (blob) {
-      const result = await shareChemistryInvite(supabase, blob, "chemistry-invite.png", {
+    const result = await shareChemistryInvite(
+      supabase,
+      () => generateChemistryInviteCard({ nickname: profile?.nickname || "친구", deckTitle, questionCount: answers.length }),
+      "chemistry-invite.png",
+      {
         title: `${profile?.nickname || "친구"}님이 보낸 궁합 테스트`,
         description: chemistryText,
         linkUrl: url,
         buttonLabel: "궁합 테스트 시작",
-      });
-      trackEvent("share", { method: result, content_type: "chemistry_invite" });
-      if (result === "kakao") {
-        setChemistryState("kakao");
-      } else if (result === "shared") {
-        setChemistryState("shared-link-copied");
-      } else if (result === "downloaded") {
-        setChemistryState("downloaded-link-copied");
-      } else {
-        setChemistryState("link-copied");
       }
-      setTimeout(() => setChemistryState("idle"), 3500);
-      return;
-    }
-
-    // 이미지 생성이 실패한 경우 - 기존 텍스트 공유로 폴백
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "취향 궁합 테스트", text: chemistryText, url });
-        setChemistryState("shared");
-      } catch (err) {
-        setChemistryState("idle");
-      }
-      setTimeout(() => setChemistryState("idle"), 2000);
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(chemistryText);
+    );
+    trackEvent("share", { method: result, content_type: "chemistry_invite" });
+    if (result === "kakao") {
+      setChemistryState("kakao");
+    } else if (result === "shared") {
+      setChemistryState("shared");
+    } else if (result === "link-copied") {
       setChemistryState("copied");
-    } catch (err) {
-      console.error("궁합 링크 복사 실패:", err);
+    } else if (result === "error") {
       setChemistryState("error");
+    } else {
+      setChemistryState("idle");
     }
-    setTimeout(() => setChemistryState("idle"), 2500);
+    setTimeout(() => setChemistryState("idle"), 3000);
   };
 
   return (
@@ -237,13 +209,9 @@ export default function DeckResult({
             onClick={handleChemistryShare}
             disabled={chemistryState === "creating"}
           >
-            {chemistryState === "creating" && "카드 만드는 중..."}
+            {chemistryState === "creating" && "여는 중..."}
             {chemistryState === "kakao" && "✅ 카카오톡으로 보냈어요"}
-            {chemistryState === "shared-link-copied" && "✅ 링크 복사됨! 사진과 함께 붙여넣어주세요"}
-            {chemistryState === "downloaded-link-copied" && "✅ 사진 저장 + 링크 복사됨"}
-            {chemistryState === "link-copied" && "✅ 궁합 링크 복사됐어요"}
             {chemistryState === "shared" && "✅ 친구에게 보냈어요"}
-            {chemistryState === "downloaded" && "✅ 초대장 저장됨! 공유해보세요"}
             {chemistryState === "copied" && "✅ 궁합 링크 복사됐어요"}
             {chemistryState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
             {chemistryState === "idle" && "👯 친구랑 궁합 테스트하기"}

@@ -23,14 +23,11 @@ export default function ChemistryResult({
   const myRank = board.findIndex((m) => m.id === myMatchId) + 1; // 0이면 못 찾음
 
   const groupShareLabel = {
-    creating: "카드 만드는 중...",
+    creating: "여는 중...",
     kakao: "✅ 카카오톡으로 보냈어요",
-    "shared-link-copied": "✅ 링크 복사됨! 사진과 함께 붙여넣어주세요",
-    "downloaded-link-copied": "✅ 사진 저장 + 링크 복사됨",
-    "link-copied": "✅ 궁합 링크 복사됐어요",
     shared: "✅ 그룹에 보냈어요",
-    downloaded: "✅ 초대장 저장됨",
     copied: "✅ 링크 복사됐어요",
+    error: "⚠️ 실패했어요, 다시 시도해주세요",
   }[groupShareState];
 
   return (
@@ -115,14 +112,11 @@ export default function ChemistryResult({
 
         {unlocked && (
           <button className="deck-result__share-btn" onClick={onCreateLink} disabled={linkState === "creating"}>
-            {linkState === "creating" && "카드 만드는 중..."}
+            {linkState === "creating" && "여는 중..."}
             {linkState === "kakao" && "✅ 카카오톡으로 보냈어요"}
-            {linkState === "shared-link-copied" && "✅ 링크 복사됨! 사진과 함께 붙여넣어주세요"}
-            {linkState === "downloaded-link-copied" && "✅ 사진 저장 + 링크 복사됨"}
-            {linkState === "link-copied" && "✅ 궁합 링크 복사됐어요"}
             {linkState === "shared" && "✅ 다음 친구에게 보냈어요"}
-            {linkState === "downloaded" && "✅ 초대장 저장됨! 공유해보세요"}
             {linkState === "copied" && "✅ 궁합 링크 복사됐어요"}
+            {linkState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
             {(linkState === "idle" || !linkState) && "👯 나도 다른 친구랑 궁합 보기"}
           </button>
         )}

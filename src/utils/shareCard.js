@@ -252,19 +252,53 @@ export async function uploadShareCard(supabase, blob) {
  *
  * 반환값: 'kakao' | 'shared' | 'downloaded' | 'cancelled' | 'link-copied'
  */
-export async function shareChemistryInvite(supabase, blob, filename, { title, description, linkUrl, buttonLabel }) {
+/**
+ * 궁합 초대장 공유의 "최선" 경로.
+ * 1) 카카오 JS 키가 설정돼있으면: 카드 이미지를 만들어서 올리고 카카오톡 공유
+ *    시트를 바로 띄움 (다운로드 없이 링크+이미지가 통째로 카톡으로 감).
+ * 2) 카카오 공유가 설정 안 돼있으면: 그냥 링크(텍스트)만 공유함. 이미지 카드를
+ *    아예 만들지 않음 - 사진을 억지로 갤러리에 저장시키는 건 오히려 불편하고
+ *    (안드로이드/일부 인앱 브라우저는 파일 공유가 안 되면 자동으로 사진을
+ *    "다운로드"해버림), "그냥 링크만 보내면 되는데 왜 사진이 저장되냐"는
+ *    혼란을 줌. 카카오 공유가 준비되기 전까지는 심플하게 링크만 보내는 게 낫다고
+ *    판단함.
+ *
+ * cardFactory는 실제로 카카오 공유를 타게 될 때만 호출되는 이미지 생성 함수
+ * (blob을 반환하는 async 함수) - 안 쓰일 땐 아예 실행 안 해서 불필요한 캔버스
+ * 렌더링도 생략됨.
+ *
+ * 반환값: 'kakao' | 'shared' | 'link-copied' | 'cancelled' | 'error'
+ */
+export async function shareChemistryInvite(supabase, cardFactory, filename, { title, description, linkUrl, buttonLabel }) {
   if (isKakaoShareConfigured()) {
     try {
+      const blob = await cardFactory();
       const imageUrl = await uploadShareCard(supabase, blob);
       const result = await shareToKakaoTalk({ title, description, imageUrl, linkUrl, buttonLabel });
       if (result === "shared") return "kakao";
     } catch (err) {
-      console.error("카카오톡 공유 실패, 기존 방식으로 대체:", err);
+      console.error("카카오톡 공유 실패, 링크 공유로 대체:", err);
     }
   }
 
-  const result = await shareImageWithLink(blob, filename, `${description} ${linkUrl}`);
-  return result === "cancelled" ? "link-copied" : result;
+  // 카카오 공유가 준비 안 됐으면 이미지 없이 링크만 공유
+  const text = `${description} ${linkUrl}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text });
+      return "shared";
+    } catch (err) {
+      return "cancelled";
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return "link-copied";
+  } catch (err) {
+    console.error("링크 복사 실패:", err);
+    return "error";
+  }
 }
 
 /**
