@@ -301,22 +301,23 @@ export async function shareChemistryInvite(supabase, cardFactory, filename, { ti
   }
 }
 
-/**
- * 생성된 이미지 Blob을 공유(가능하면 네이티브 공유 시트, 아니면 다운로드)한다.
- * 반환값: 'shared' | 'downloaded' | 'cancelled'
- */
-export async function shareOrDownloadImage(blob, filename, shareText) {
-  const file = new File([blob], filename, { type: "image/png" });
+// [수정] Windows/Mac 데스크톱 브라우저(특히 Edge)도 navigator.canShare({files})를
+// 지원해서, "이미지로 저장" 버튼을 눌러도 다운로드가 아니라 OS의 공유 대상
+// 선택창(OneNote, 프린터, 메일 등 실제로 이미지를 못 받는 앱들까지 나열됨)이
+// 떠버려 사용자가 뭘 해야 할지 몰라 "아무 반응이 없다"고 느끼는 문제가 있었음.
+// 모바일에서는 반대로 공유 시트를 거쳐야 "사진 앱에 저장"이 되므로(디바이스에
+// 파일로 바로 꽂아줄 방법이 마땅치 않음) 공유 시트가 오히려 정답임.
+// -> 모바일에서만 공유 시트를 쓰고, 데스크톱은 바로 파일 다운로드로 분기함.
+function isLikelyMobileDevice() {
+  const ua = navigator.userAgent || "";
+  if (/Android|iPhone|iPod/i.test(ua)) return true;
+  // iPadOS 13+는 UA에 "iPad"가 안 나오고 데스크톱 Safari처럼 보이므로 터치 지원으로 보정
+  if (/iPad/i.test(ua)) return true;
+  if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
 
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], text: shareText });
-      return "shared";
-    } catch (err) {
-      return "cancelled"; // 사용자가 공유를 취소한 경우 등
-    }
-  }
-
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -325,6 +326,25 @@ export async function shareOrDownloadImage(blob, filename, shareText) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * 생성된 이미지 Blob을 공유(모바일은 네이티브 공유 시트, 데스크톱은 바로 다운로드)한다.
+ * 반환값: 'shared' | 'downloaded' | 'cancelled'
+ */
+export async function shareOrDownloadImage(blob, filename, shareText) {
+  const file = new File([blob], filename, { type: "image/png" });
+
+  if (isLikelyMobileDevice() && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], text: shareText });
+      return "shared";
+    } catch (err) {
+      return "cancelled"; // 사용자가 공유를 취소한 경우 등
+    }
+  }
+
+  downloadBlob(blob, filename);
   return "downloaded";
 }
 

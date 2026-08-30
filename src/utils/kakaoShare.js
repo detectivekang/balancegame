@@ -12,7 +12,7 @@
 //      (예: https://내아이디.github.io) - 등록 안 하면 카톡 공유가 조용히 실패함
 //   4) 카카오 디벨로퍼스 > 제품 설정 > 카카오 로그인 등은 이미 쓰고 있으니 그대로 두고,
 //      "카카오톡 공유" 제품만 추가로 활성화하기
-const KAKAO_JS_KEY = "여기에_카카오_JavaScript_키를_넣으세요";
+const KAKAO_JS_KEY = "d965a5b7407ebc6df52f6c60469f9011";
 
 let sdkLoadPromise = null;
 
@@ -53,7 +53,13 @@ async function ensureKakaoInit() {
  *
  * 반환값: 'shared' | 'unavailable' | 'error'
  */
-export async function shareToKakaoTalk({ title, description, imageUrl, linkUrl, buttonLabel = "확인하기" }) {
+export async function shareToKakaoTalk({
+  title,
+  description,
+  imageUrl,
+  linkUrl,
+  buttonLabel = "확인하기",
+}) {
   if (!isKakaoShareConfigured()) return "unavailable";
 
   try {

@@ -63,7 +63,11 @@ export default function WorldCupResult({ worldcupId, worldcupTitle, champion, ro
         .single();
       if (error) throw error;
 
-      const url = `${window.location.origin}${window.location.pathname}#/worldcup/result/${data.id}`;
+      // [수정] 해시(#/worldcup/result/:id) 링크는 카카오톡/인스타그램 인앱
+      // 브라우저가 열 때 "#" 뒤를 잘라버려서 그냥 홈 화면만 뜨는 문제가 있었음.
+      // 대신 쿼리스트링(?wc=:id)으로 링크를 만들고, main.jsx의 부트스트랩
+      // 코드가 앱 로드 시점에 이걸 다시 정상 해시 라우트로 바꿔줌.
+      const url = `${window.location.origin}${window.location.pathname}?wc=${data.id}`;
       const text = `🏆 "${worldcupTitle}" ${roundSize}강 이상형 월드컵 우승은 "${champion.label}"! 너도 해봐 👉 ${url}`;
 
       if (navigator.share) {
