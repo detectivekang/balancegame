@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { CATEGORIES, categoryMeta } from "../data/categories";
 import CategoryGrid from "../components/CategoryGrid";
@@ -12,6 +13,7 @@ import EnergyEmpty from "../components/EnergyEmpty";
 import AdFitBanner from "../components/AdFitBanner";
 import LoadingScreen from "../components/LoadingScreen";
 import { useSession } from "../hooks/useSession";
+import { pickPersona, countMinorityPicks } from "../utils/persona";
 
 function shuffle(arr) {
   const a = [...arr];
@@ -44,10 +46,10 @@ function buildFallbackDecks(questions) {
 
 export default function Home() {
   const { player, profile } = useSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [questions, setQuestions] = useState([]);
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [trendingSetIds, setTrendingSetIds] = useState([]); // 최근 24시간 인기순 set_id 목록
 
   const [view, setView] = useState("browse"); // browse | category | playing | result
   const [category, setCategory] = useState(null);
@@ -115,23 +117,6 @@ export default function Home() {
     };
   }, []);
 
-  // 실시간 인기(최근 24시간 투표량 기준) - 개별 투표 내역은 안 보이고 집계만 받아옴
-  useEffect(() => {
-    let cancelled = false;
-    supabase
-      .rpc("trending_deck_ids", { p_hours: 24, p_limit: 8 })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("실시간 인기 문제집 조회 실패:", error);
-          return;
-        }
-        if (!cancelled) setTrendingSetIds((data || []).map((r) => r.set_id));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const counts = useMemo(() => {
     const map = {};
     questions.forEach((q) => {
@@ -165,22 +150,22 @@ export default function Home() {
     [unlockedDecks]
   );
 
-  // 최근 24시간 투표가 많은 순서 그대로 유지해서 노출 (오래 쌓인 BEST와 다르게
-  // 지금 당장 활발한 문제집이 위로 옴 - 신선함/화제성 위주)
-  const trendingDecks = useMemo(() => {
-    const byId = {};
-    unlockedDecks.forEach((d) => (byId[d.id] = d));
-    return trendingSetIds
-      .map((id) => byId[id])
-      .filter(Boolean)
-      .slice(0, 6)
-      .map((d) => ({ ...d, badge: "hot", badgeLabel: "HOT" }));
-  }, [unlockedDecks, trendingSetIds]);
-
   const categoryDecks = useMemo(
     () => unlockedDecks.filter((d) => d.category === category),
     [unlockedDecks, category]
   );
+
+  // 결과 카드 링크("너도 해볼래?")로 들어온 경우, 그 문제집을 자동으로 시작해서
+  // 목록에서 다시 찾을 필요 없이 바로 이어지게 함.
+  useEffect(() => {
+    if (decks.length === 0) return;
+    const playId = searchParams.get("play");
+    if (!playId) return;
+    const target = decks.find((d) => d.id === playId);
+    if (target) startDeck(target);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decks]);
 
   const startDeck = (deck) => {
     if (deck.locked) return; // DeckCard가 자체적으로 클릭을 막지만 방어적으로 한 번 더 체크
@@ -195,6 +180,32 @@ export default function Home() {
   const handleVoted = (side, votesA, votesB, questionId) => {
     setSessionAnswers((prev) => [...prev, { side, votesA, votesB, questionId }]);
     setXpEarned((prev) => prev + 1);
+  };
+
+  // 문제집 결과를 "링크"로 공유 - 예전엔 PNG 이미지 한 장만 만들어서 받는 사람이
+  // 클릭해서 자기도 해볼 방법이 없었음. 월드컵 결과 공유와 동일한 패턴으로 개선.
+  const createShareLink = async () => {
+    const persona = pickPersona(sessionAnswers);
+    const minorityCount = countMinorityPicks(sessionAnswers);
+    const isFallback = activeDeck.id?.startsWith?.("fallback-");
+
+    const { data, error } = await supabase
+      .from("balance_results")
+      .insert({
+        set_id: isFallback ? null : activeDeck.id,
+        category: isFallback ? activeDeck.category : null,
+        deck_title: activeDeck.title,
+        sharer_nickname_snapshot: profile?.nickname || "친구",
+        persona_label: persona.label,
+        persona_desc: persona.desc,
+        minority_count: minorityCount,
+        xp_earned: xpEarned,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return `${window.location.origin}${window.location.pathname}#/result/${data.id}`;
   };
 
   // 문제집 결과를 "친구랑 궁합 테스트" 링크로 저장 - 친구가 이 링크로 들어와서
@@ -288,6 +299,7 @@ export default function Home() {
           onRestart={() => startDeck(activeDeck)}
           onOtherDecks={() => goCategory(activeDeck.category)}
           onHome={goBrowse}
+          onCreateShareLink={createShareLink}
           onCreateChemistryLink={createChemistryLink}
         />
       </div>
@@ -322,10 +334,7 @@ export default function Home() {
   return (
     <div className="page page--home">
       <PlayerStatusBar />
-      <DeckRow title="🆕 신규 문제집" decks={newDecks} onSelect={startDeck} />
-      {trendingDecks.length > 0 && (
-        <DeckRow title="🔥 지금 뜨는 문제집" decks={trendingDecks} onSelect={startDeck} />
-      )}
+      <DeckRow title="🔥 신규 문제집" decks={newDecks} onSelect={startDeck} />
       <DeckRow title="🏆 베스트 문제집" decks={bestDecks} onSelect={startDeck} />
       <CategoryGrid categories={CATEGORIES} counts={counts} onSelect={goCategory} />
       {!player?.isPremium && (

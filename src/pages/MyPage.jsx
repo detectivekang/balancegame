@@ -4,7 +4,6 @@ import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 import { MAX_LEVEL } from "../utils/levels";
 import { uploadAvatarImage } from "../utils/image";
-import { isPushSupported, getNotificationPermission, isSubscribed, subscribeToPush, unsubscribeFromPush } from "../utils/push";
 import LoadingScreen from "../components/LoadingScreen";
 import MyVotesModal from "../components/MyVotesModal";
 
@@ -20,41 +19,7 @@ export default function MyPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [showVotesModal, setShowVotesModal] = useState(false);
-  const [pushState, setPushState] = useState("checking"); // checking | on | off | unsupported | loading
   const avatarInputRef = useRef(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!isPushSupported()) {
-        setPushState("unsupported");
-        return;
-      }
-      if (getNotificationPermission() === "denied") {
-        setPushState("denied");
-        return;
-      }
-      const subscribed = await isSubscribed();
-      if (!cancelled) setPushState(subscribed ? "on" : "off");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleTogglePush = async () => {
-    if (pushState === "on") {
-      setPushState("loading");
-      await unsubscribeFromPush(supabase);
-      setPushState("off");
-      return;
-    }
-    setPushState("loading");
-    const result = await subscribeToPush(supabase, user.id);
-    if (result === "subscribed") setPushState("on");
-    else if (result === "denied") setPushState("denied");
-    else setPushState("off");
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -233,27 +198,6 @@ export default function MyPage() {
       </div>
 
       {showVotesModal && <MyVotesModal userId={user.id} onClose={() => setShowVotesModal(false)} />}
-
-      {pushState !== "unsupported" && (
-        <div className="mypage-push">
-          <div className="mypage-push__text">
-            <div className="mypage-push__title">🔔 알림 받기</div>
-            <div className="mypage-push__desc">
-              {pushState === "denied"
-                ? "브라우저 알림 권한이 꺼져있어요. 브라우저 설정에서 허용해주세요."
-                : "에너지가 다 찼을 때, 궁합 테스트에 친구가 참여했을 때, 월드컵이 승인됐을 때 알려드려요."}
-            </div>
-          </div>
-          <button
-            type="button"
-            className={`mypage-push__toggle ${pushState === "on" ? "is-on" : ""}`}
-            onClick={handleTogglePush}
-            disabled={pushState === "loading" || pushState === "checking" || pushState === "denied"}
-          >
-            {pushState === "loading" || pushState === "checking" ? "..." : pushState === "on" ? "켜짐" : "꺼짐"}
-          </button>
-        </div>
-      )}
 
       <h3 className="deck-row__title">📚 내가 만든 문제집</h3>
       {mySets.length === 0 && <p className="empty-state">아직 만든 문제집이 없어요.</p>}

@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import React, { useMemo, useState } from "react";
 import { useSession } from "../hooks/useSession";
 import AdFitBanner from "./AdFitBanner";
-import { generateBalanceShareCard, generateChemistryInviteCard, shareChemistryInvite, shareResultCard } from "../utils/shareCard";
-import { trackEvent } from "../utils/analytics";
+import { pickPersona, countMinorityPicks } from "../utils/persona";
+import { generateBalanceShareCard, shareOrDownloadImage } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
-const SHARE_URL = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
 
 function Confetti() {
   const pieces = useMemo(
@@ -41,29 +39,6 @@ function Confetti() {
   );
 }
 
-function pickPersona(answers) {
-  const total = answers.length;
-  if (total === 0) return { label: "밸런스 요정", desc: "취향이 아직 베일에 싸여 있어요." };
-  const aCount = answers.filter((a) => a.side === "A").length;
-  const ratioA = aCount / total;
-
-  if (ratioA >= 0.75) return { label: "확신의 A형 인간", desc: "고민 없이 직진하는 타입이네요." };
-  if (ratioA <= 0.25) return { label: "확신의 B형 인간", desc: "확고한 취향의 소유자예요." };
-  if (ratioA > 0.5) return { label: "살짝 A 쪽 밸런서", desc: "그래도 마음은 A 쪽으로 기울었어요." };
-  if (ratioA < 0.5) return { label: "살짝 B 쪽 밸런서", desc: "그래도 마음은 B 쪽으로 기울었어요." };
-  return { label: "완벽한 밸런스형", desc: "양쪽 다 이해하는 균형감각의 소유자!" };
-}
-
-// 각 문제에서 내가 고른 선택이 "그 순간 기준" 소수의견이었는지 세어봄 -> 재미 요소
-function countMinorityPicks(answers) {
-  return answers.filter((a) => {
-    const total = a.votesA + a.votesB;
-    if (!total) return false;
-    const myVotes = a.side === "A" ? a.votesA : a.votesB;
-    return myVotes / total < 0.5;
-  }).length;
-}
-
 export default function DeckResult({
   deckTitle,
   answers,
@@ -71,41 +46,82 @@ export default function DeckResult({
   onRestart,
   onOtherDecks,
   onHome,
+  onCreateShareLink,
   onCreateChemistryLink,
 }) {
-  const { player, profile } = useSession();
+  const { player } = useSession();
   const persona = pickPersona(answers);
   const minorityCount = useMemo(() => countMinorityPicks(answers), [answers]);
-  const [shareState, setShareState] = useState("idle"); // idle | copied
+  const [linkState, setLinkState] = useState("idle"); // idle | creating | shared | copied | error
+  const [imageState, setImageState] = useState("idle"); // idle | generating | downloaded
   const [chemistryState, setChemistryState] = useState("idle"); // idle | creating | shared | copied | error
 
-  const shareText = `나는 "${persona.label}"! 🎯 "${deckTitle}" 문제집 결과 확인하고 너도 해봐 👉 ${SHARE_URL}`;
+  // 결과를 링크로 공유 - 받는 사람이 정적 이미지 한 장만 보고 끝나는 게 아니라,
+  // 클릭하면 결과 카드 페이지가 뜨고 거기서 바로 "너도 해볼래?"로 이어지게 함.
+  const handleShareLink = async () => {
+    if (linkState === "creating" || !onCreateShareLink) return;
+    setLinkState("creating");
 
-  useEffect(() => {
-    trackEvent("deck_complete", { deck_title: deckTitle, question_count: answers.length, xp_earned: xpEarned });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const minorityText =
-    minorityCount > 0 ? `😎 이 중 ${minorityCount}개는 소수의견을 선택했어요!` : null;
+    let url = null;
+    try {
+      url = await onCreateShareLink();
+    } catch (err) {
+      console.error("결과 링크 생성 실패:", err);
+      setLinkState("error");
+      setTimeout(() => setLinkState("idle"), 2000);
+      return;
+    }
 
-  const handleShare = async () => {
-    if (shareState === "generating") return;
-    setShareState("generating");
+    const text = `나는 "${persona.label}"! 🎯 "${deckTitle}" 결과 확인하고 너도 해봐 👉 ${url}`;
 
-    const result = await shareResultCard(
-      supabase,
-      () => generateBalanceShareCard({ deckTitle, personaLabel: persona.label, personaDesc: persona.desc, minorityText, xpEarned }),
-      "balance-result.png",
-      {
-        title: `밸런스게임 결과 - "${persona.label}"`,
-        description: shareText,
-        linkUrl: SHARE_URL,
-        buttonLabel: "나도 해보기",
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "밸런스게임 결과", text, url });
+        setLinkState("shared");
+      } catch (err) {
+        setLinkState("idle");
       }
-    );
-    trackEvent("share", { method: result, content_type: "balance_result" });
-    setShareState(result === "link-copied" ? "copied" : result === "cancelled" ? "idle" : result);
-    setTimeout(() => setShareState("idle"), 3000);
+      setTimeout(() => setLinkState("idle"), 2000);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setLinkState("copied");
+    } catch (err) {
+      console.error("결과 링크 복사 실패:", err);
+      setLinkState("error");
+    }
+    setTimeout(() => setLinkState("idle"), 2500);
+  };
+
+  // 인스타 스토리 등에 올리고 싶은 사람들을 위한 보조 옵션 - 이미지 한 장 저장/공유.
+  const minorityText = minorityCount > 0 ? `😎 이 중 ${minorityCount}개는 소수의견을 선택했어요!` : null;
+
+  const handleSaveImage = async () => {
+    if (imageState === "generating") return;
+    setImageState("generating");
+
+    let blob = null;
+    try {
+      blob = await generateBalanceShareCard({
+        deckTitle,
+        personaLabel: persona.label,
+        personaDesc: persona.desc,
+        minorityText,
+        xpEarned,
+      });
+    } catch (err) {
+      console.error("공유 카드 이미지 생성 실패:", err);
+    }
+
+    if (blob) {
+      const result = await shareOrDownloadImage(blob, "balance-result.png", `나는 "${persona.label}"!`);
+      setImageState(result === "downloaded" ? "downloaded" : "idle");
+    } else {
+      setImageState("idle");
+    }
+    setTimeout(() => setImageState("idle"), 2500);
   };
 
   const handleChemistryShare = async () => {
@@ -124,30 +140,25 @@ export default function DeckResult({
 
     const chemistryText = `친구야 나랑 "${deckTitle}" 궁합 테스트 해볼래? 같이 풀고 얼마나 취향 맞는지 보자 👉 ${url}`;
 
-    const result = await shareChemistryInvite(
-      supabase,
-      () => generateChemistryInviteCard({ nickname: profile?.nickname || "친구", deckTitle, questionCount: answers.length }),
-      "chemistry-invite.png",
-      {
-        title: `${profile?.nickname || "친구"}님이 보낸 궁합 테스트`,
-        description: chemistryText,
-        linkUrl: url,
-        buttonLabel: "궁합 테스트 시작",
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "취향 궁합 테스트", text: chemistryText, url });
+        setChemistryState("shared");
+      } catch (err) {
+        setChemistryState("idle");
       }
-    );
-    trackEvent("share", { method: result, content_type: "chemistry_invite" });
-    if (result === "kakao") {
-      setChemistryState("kakao");
-    } else if (result === "shared") {
-      setChemistryState("shared");
-    } else if (result === "link-copied") {
-      setChemistryState("copied");
-    } else if (result === "error") {
-      setChemistryState("error");
-    } else {
-      setChemistryState("idle");
+      setTimeout(() => setChemistryState("idle"), 2000);
+      return;
     }
-    setTimeout(() => setChemistryState("idle"), 3000);
+
+    try {
+      await navigator.clipboard.writeText(chemistryText);
+      setChemistryState("copied");
+    } catch (err) {
+      console.error("궁합 링크 복사 실패:", err);
+      setChemistryState("error");
+    }
+    setTimeout(() => setChemistryState("idle"), 2500);
   };
 
   return (
@@ -167,13 +178,18 @@ export default function DeckResult({
 
         <p className="deck-result__xp">+{xpEarned} XP 획득!</p>
 
-        <button className="deck-result__share-btn" onClick={handleShare} disabled={shareState === "generating"}>
-          {shareState === "generating" && "여는 중..."}
-          {shareState === "kakao" && "✅ 카카오톡으로 보냈어요"}
-          {shareState === "shared" && "✅ 친구에게 보냈어요"}
-          {shareState === "copied" && "✅ 링크가 복사됐어요"}
-          {shareState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
-          {shareState === "idle" && "📤 결과 공유하기"}
+        <button className="deck-result__share-btn" onClick={handleShareLink} disabled={linkState === "creating"}>
+          {linkState === "creating" && "결과 카드 만드는 중..."}
+          {linkState === "shared" && "✅ 친구에게 보냈어요"}
+          {linkState === "copied" && "✅ 결과 링크가 복사됐어요"}
+          {linkState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
+          {(linkState === "idle" || !linkState) && "📤 결과 공유하기 (링크)"}
+        </button>
+
+        <button className="wc-result__image-btn" onClick={handleSaveImage} disabled={imageState === "generating"}>
+          {imageState === "generating" && "이미지 만드는 중..."}
+          {imageState === "downloaded" && "✅ 이미지 저장됨"}
+          {(imageState === "idle" || !imageState) && "🖼️ 이미지로 저장 (인스타 스토리용)"}
         </button>
 
         {onCreateChemistryLink && (
@@ -182,8 +198,7 @@ export default function DeckResult({
             onClick={handleChemistryShare}
             disabled={chemistryState === "creating"}
           >
-            {chemistryState === "creating" && "여는 중..."}
-            {chemistryState === "kakao" && "✅ 카카오톡으로 보냈어요"}
+            {chemistryState === "creating" && "링크 만드는 중..."}
             {chemistryState === "shared" && "✅ 친구에게 보냈어요"}
             {chemistryState === "copied" && "✅ 궁합 링크 복사됐어요"}
             {chemistryState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
