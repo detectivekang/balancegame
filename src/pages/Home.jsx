@@ -165,7 +165,7 @@ export default function Home() {
     if (target) startDeck(target);
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [decks]);
+  }, [decks, searchParams]);
 
   const startDeck = (deck) => {
     if (deck.locked) return; // DeckCard가 자체적으로 클릭을 막지만 방어적으로 한 번 더 체크

@@ -96,19 +96,6 @@ export default function WorldCup() {
 
       setWorldcups(built);
       setLoading(false);
-
-      // "나도 도전하기" 링크(?play=worldcupId)로 들어온 경우, 그 월드컵을 자동으로 선택해서
-      // 목록에서 다시 찾아 누를 필요 없이 바로 강수 선택 화면으로 이동시킴.
-      const playId = searchParams.get("play");
-      if (playId) {
-        const target = built.find((w) => w.id === playId);
-        if (target) {
-          setSelected(target);
-          setEntryError(null);
-          setView("roundSelect");
-        }
-        setSearchParams({}, { replace: true });
-      }
     }
 
     load();
@@ -116,6 +103,24 @@ export default function WorldCup() {
       cancelled = true;
     };
   }, []);
+
+  // "나도 도전하기" 링크(?play=worldcupId)로 들어온 경우, 그 월드컵을 자동으로 선택해서
+  // 목록에서 다시 찾아 누를 필요 없이 바로 강수 선택 화면으로 이동시킴.
+  // (최초 로딩 effect 안에 있으면, 페이지가 리마운트 없이 떠 있는 채로 ?play= 값만
+  // 바뀌었을 때 감지를 못 해서 "처음 한 번만 되고 그다음부터 안 먹히는" 버그가 생김)
+  useEffect(() => {
+    if (worldcups.length === 0) return;
+    const playId = searchParams.get("play");
+    if (!playId) return;
+    const target = worldcups.find((w) => w.id === playId);
+    if (target) {
+      setSelected(target);
+      setEntryError(null);
+      setView("roundSelect");
+    }
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldcups, searchParams]);
 
   const filteredWorldcups = useMemo(
     () => (categoryFilter ? worldcups.filter((w) => w.category === categoryFilter) : worldcups),
