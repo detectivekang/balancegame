@@ -257,6 +257,7 @@ export default function WorldCup() {
           ✕ 나가기
         </button>
         <WorldCupMatch
+          key={`${roundItemCount}-${matchIndex}`}
           roundLabel={roundLabelFor(roundItemCount, isFinal)}
           matchLabel={`${matchIndex + 1} / ${matches.length}`}
           left={left}
