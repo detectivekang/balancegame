@@ -253,7 +253,57 @@ export async function uploadShareCard(supabase, blob) {
  * 반환값: 'kakao' | 'shared' | 'downloaded' | 'cancelled' | 'link-copied'
  */
 /**
- * 궁합 초대장 공유의 "최선" 경로.
+ * 결과 카드(밸런스게임 페르소나 / 월드컵 우승 등) 공유의 "최선" 경로.
+ *
+ * 처음엔 이미지가 핵심이라고 보고 항상 이미지를 같이 보내려 했는데, 실제로
+ * 이미지+텍스트를 함께 navigator.share로 보내면 일부 공유 대상(메일/페이스북 등)이
+ * 이미지만 받고 텍스트(=결과 페이지로 가는 링크)는 버려버리는 문제가 있었음.
+ * 그러면 받는 사람은 사진만 보고 실제 결과 페이지로 가는 길이 없어짐 -
+ * "결과 공유하기 했더니 그냥 홈/소개 화면만 나온다"는 혼란으로 이어짐.
+ *
+ * 그래서 궁합 초대장과 동일한 원칙으로 통일함:
+ * 1) 카카오 JS 키가 설정돼있으면: 카드 이미지를 올리고 카카오톡 공유 시트를
+ *    바로 띄움 (다운로드 없이 링크+이미지가 통째로 카톡으로 감. 카카오 피드
+ *    템플릿은 이미지와 링크를 분리해서 안전하게 같이 보냄).
+ * 2) 아니면: 이미지 없이 "링크만" 확실하게 공유함 (네이티브 공유 시트 또는
+ *    클립보드 복사). 사진이 보고 싶으면 별도의 "이미지로 저장" 버튼을 씀.
+ *
+ * 반환값: 'kakao' | 'shared' | 'link-copied' | 'cancelled' | 'error'
+ */
+export async function shareResultCard(supabase, cardFactory, filename, { title, description, linkUrl, buttonLabel }) {
+  if (isKakaoShareConfigured()) {
+    try {
+      const blob = await cardFactory();
+      const imageUrl = await uploadShareCard(supabase, blob);
+      const result = await shareToKakaoTalk({ title, description, imageUrl, linkUrl, buttonLabel });
+      if (result === "shared") return "kakao";
+    } catch (err) {
+      console.error("카카오톡 공유 실패, 링크 공유로 대체:", err);
+    }
+  }
+
+  // 카카오 공유가 준비 안 됐으면 이미지 없이 링크만 공유 (텍스트가 씹히는 문제 방지)
+  const text = `${description} ${linkUrl}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text });
+      return "shared";
+    } catch (err) {
+      return "cancelled";
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return "link-copied";
+  } catch (err) {
+    console.error("링크 복사 실패:", err);
+    return "error";
+  }
+}
+
+/**
+ * 궁합 초대장처럼 "링크 클릭이 핵심"인 공유에 씀 (이미지는 부가 요소).
  * 1) 카카오 JS 키가 설정돼있으면: 카드 이미지를 만들어서 올리고 카카오톡 공유
  *    시트를 바로 띄움 (다운로드 없이 링크+이미지가 통째로 카톡으로 감).
  * 2) 카카오 공유가 설정 안 돼있으면: 그냥 링크(텍스트)만 공유함. 이미지 카드를
@@ -301,23 +351,13 @@ export async function shareChemistryInvite(supabase, cardFactory, filename, { ti
   }
 }
 
-// [수정] Windows/Mac 데스크톱 브라우저(특히 Edge)도 navigator.canShare({files})를
-// 지원해서, "이미지로 저장" 버튼을 눌러도 다운로드가 아니라 OS의 공유 대상
-// 선택창(OneNote, 프린터, 메일 등 실제로 이미지를 못 받는 앱들까지 나열됨)이
-// 떠버려 사용자가 뭘 해야 할지 몰라 "아무 반응이 없다"고 느끼는 문제가 있었음.
-// 모바일에서는 반대로 공유 시트를 거쳐야 "사진 앱에 저장"이 되므로(디바이스에
-// 파일로 바로 꽂아줄 방법이 마땅치 않음) 공유 시트가 오히려 정답임.
-// -> 모바일에서만 공유 시트를 쓰고, 데스크톱은 바로 파일 다운로드로 분기함.
-function isLikelyMobileDevice() {
-  const ua = navigator.userAgent || "";
-  if (/Android|iPhone|iPod/i.test(ua)) return true;
-  // iPadOS 13+는 UA에 "iPad"가 안 나오고 데스크톱 Safari처럼 보이므로 터치 지원으로 보정
-  if (/iPad/i.test(ua)) return true;
-  if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
-  return false;
-}
-
-function downloadBlob(blob, filename) {
+/**
+ * 무조건 로컬에 파일로 다운로드시킴 (공유 시트 없이). "이미지로 저장" 버튼처럼
+ * 사용자가 명시적으로 "저장"을 눌렀을 때 쓰는 함수 - 브라우저가 파일 공유를
+ * 지원한다고 해서 OS 공유창부터 띄우면 "저장 버튼 눌렀는데 왜 공유창이 뜨냐"는
+ * 혼란을 주므로, 이 버튼만큼은 항상 결정적으로(deterministic) 동작하게 함.
+ */
+export function downloadImage(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -329,13 +369,13 @@ function downloadBlob(blob, filename) {
 }
 
 /**
- * 생성된 이미지 Blob을 공유(모바일은 네이티브 공유 시트, 데스크톱은 바로 다운로드)한다.
+ * 생성된 이미지 Blob을 공유(가능하면 네이티브 공유 시트, 아니면 다운로드)한다.
  * 반환값: 'shared' | 'downloaded' | 'cancelled'
  */
 export async function shareOrDownloadImage(blob, filename, shareText) {
   const file = new File([blob], filename, { type: "image/png" });
 
-  if (isLikelyMobileDevice() && navigator.canShare && navigator.canShare({ files: [file] })) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], text: shareText });
       return "shared";
@@ -344,7 +384,14 @@ export async function shareOrDownloadImage(blob, filename, shareText) {
     }
   }
 
-  downloadBlob(blob, filename);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
   return "downloaded";
 }
 

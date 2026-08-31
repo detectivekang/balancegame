@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 import AdFitBanner from "./AdFitBanner";
-import { generateBalanceShareCard, generateChemistryInviteCard, shareOrDownloadImage, shareChemistryInvite } from "../utils/shareCard";
+import { generateBalanceShareCard, generateChemistryInviteCard, shareChemistryInvite, shareResultCard } from "../utils/shareCard";
 import { trackEvent } from "../utils/analytics";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
@@ -92,49 +92,20 @@ export default function DeckResult({
     if (shareState === "generating") return;
     setShareState("generating");
 
-    let blob = null;
-    try {
-      blob = await generateBalanceShareCard({
-        deckTitle,
-        personaLabel: persona.label,
-        personaDesc: persona.desc,
-        minorityText,
-        xpEarned,
-      });
-    } catch (err) {
-      console.error("공유 카드 이미지 생성 실패:", err);
-    }
-
-    if (blob) {
-      const result = await shareOrDownloadImage(blob, "balance-result.png", shareText);
-      trackEvent("share", { method: result, content_type: "balance_result" });
-      if (result === "downloaded") {
-        setShareState("downloaded");
-        setTimeout(() => setShareState("idle"), 2500);
-      } else {
-        setShareState("idle");
+    const result = await shareResultCard(
+      supabase,
+      () => generateBalanceShareCard({ deckTitle, personaLabel: persona.label, personaDesc: persona.desc, minorityText, xpEarned }),
+      "balance-result.png",
+      {
+        title: `밸런스게임 결과 - "${persona.label}"`,
+        description: shareText,
+        linkUrl: SHARE_URL,
+        buttonLabel: "나도 해보기",
       }
-      return;
-    }
-
-    // 이미지 생성 자체가 실패한 경우 - 기존 텍스트 공유로 폴백
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "밸런스게임 결과", text: shareText, url: SHARE_URL });
-      } catch (err) {
-        // 취소 시 무시
-      }
-      setShareState("idle");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setShareState("copied");
-      setTimeout(() => setShareState("idle"), 2000);
-    } catch (err) {
-      console.error("공유 텍스트 복사 실패:", err);
-      setShareState("idle");
-    }
+    );
+    trackEvent("share", { method: result, content_type: "balance_result" });
+    setShareState(result === "link-copied" ? "copied" : result === "cancelled" ? "idle" : result);
+    setTimeout(() => setShareState("idle"), 3000);
   };
 
   const handleChemistryShare = async () => {
@@ -197,9 +168,11 @@ export default function DeckResult({
         <p className="deck-result__xp">+{xpEarned} XP 획득!</p>
 
         <button className="deck-result__share-btn" onClick={handleShare} disabled={shareState === "generating"}>
-          {shareState === "generating" && "이미지 만드는 중..."}
-          {shareState === "downloaded" && "✅ 이미지 저장됨! 공유해보세요"}
+          {shareState === "generating" && "여는 중..."}
+          {shareState === "kakao" && "✅ 카카오톡으로 보냈어요"}
+          {shareState === "shared" && "✅ 친구에게 보냈어요"}
           {shareState === "copied" && "✅ 링크가 복사됐어요"}
+          {shareState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
           {shareState === "idle" && "📤 결과 공유하기"}
         </button>
 
