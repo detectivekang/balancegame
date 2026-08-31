@@ -205,7 +205,7 @@ export default function Home() {
       .single();
 
     if (error) throw error;
-    return `${window.location.origin}${window.location.pathname}#/result/${data.id}`;
+    return data.id;
   };
 
   // 문제집 결과를 "친구랑 궁합 테스트" 링크로 저장 - 친구가 이 링크로 들어와서

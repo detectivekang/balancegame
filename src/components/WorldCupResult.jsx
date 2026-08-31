@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, SUPABASE_URL } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 import { generateWorldcupShareCard, shareOrDownloadImage } from "../utils/shareCard";
 
@@ -63,7 +63,10 @@ export default function WorldCupResult({ worldcupId, worldcupTitle, champion, ro
         .single();
       if (error) throw error;
 
-      const url = `${window.location.origin}${window.location.pathname}#/worldcup/result/${data.id}`;
+      // 카카오톡 등에서 링크 미리보기에 실제 우승 이미지가 뜨도록, GitHub Pages 직행
+      // 링크 대신 Edge Function(share-preview)이 만들어주는 og:image 포함 페이지를 공유함.
+      // (SPA라 정적 index.html만으로는 결과별 미리보기 이미지를 보여줄 수 없어서 필요함)
+      const url = `${SUPABASE_URL}/functions/v1/share-preview?type=worldcup&id=${data.id}`;
       const text = `🏆 "${worldcupTitle}" ${roundSize}강 이상형 월드컵 우승은 "${champion.label}"! 너도 해봐 👉 ${url}`;
 
       if (navigator.share) {
