@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { useSession } from "../hooks/useSession";
-import { SUPABASE_URL } from "../lib/supabaseClient";
 import AdFitBanner from "./AdFitBanner";
 import { pickPersona, countMinorityPicks } from "../utils/persona";
 import { generateBalanceShareCard, shareOrDownloadImage } from "../utils/shareCard";
@@ -73,10 +72,9 @@ export default function DeckResult({
       return;
     }
 
-    // 카카오톡 등에서 링크 미리보기가 뜨도록, GitHub Pages 직행 링크 대신
-    // Edge Function(share-preview)이 만들어주는 og 태그 포함 페이지를 공유함.
-    const url = `${SUPABASE_URL}/functions/v1/share-preview?type=balance&id=${resultId}`;
-    const text = `나는 "${persona.label}"! 🎯 "${deckTitle}" 결과 확인하고 너도 해봐 👉 ${url}`;
+    // 결과 페이지로 바로 가는 링크를 텍스트와 함께 공유 (간단하게: 게임명 - 제목 + 링크)
+    const url = `https://detectivekang.github.io/balancegame/#/result/${resultId}`;
+    const text = `밸런스 게임 - "${deckTitle}"\n${url}`;
 
     if (navigator.share) {
       try {
@@ -142,7 +140,7 @@ export default function DeckResult({
       return;
     }
 
-    const chemistryText = `친구야 나랑 "${deckTitle}" 궁합 테스트 해볼래? 같이 풀고 얼마나 취향 맞는지 보자 👉 ${url}`;
+    const chemistryText = `밸런스 게임 - "${deckTitle}" 궁합 테스트\n${url}`;
 
     if (navigator.share) {
       try {

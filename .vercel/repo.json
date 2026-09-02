@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_W4yBZXxdZg7HoiYjWlBD7g0Dj11B",
+      "name": "balancegame",
+      "directory": ".",
+      "orgId": "team_tR41yYQAvqEmj7GtUmt4ChOk"
+    }
+  ]
+}
