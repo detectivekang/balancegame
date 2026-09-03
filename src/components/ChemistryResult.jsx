@@ -13,8 +13,22 @@ export default function ChemistryResult({
   onCreateLink,
   onHome,
   linkState,
+  groupBoard, // 같은 초대에 응답한 모두의 결과 [{ id, respondent_nickname, percent }]
+  myMatchId,
+  onShareGroup,
+  groupShareState,
 }) {
   const tier = chemistryTier(percent);
+  const board = groupBoard || [];
+  const myRank = board.findIndex((m) => m.id === myMatchId) + 1; // 0이면 못 찾음
+
+  const groupShareLabel = {
+    creating: "여는 중...",
+    kakao: "✅ 카카오톡으로 보냈어요",
+    shared: "✅ 그룹에 보냈어요",
+    copied: "✅ 링크 복사됐어요",
+    error: "⚠️ 실패했어요, 다시 시도해주세요",
+  }[groupShareState];
 
   return (
     <div className="deck-result">
@@ -59,11 +73,50 @@ export default function ChemistryResult({
           </div>
         )}
 
+        {unlocked && board.length > 0 && (
+          <div className="chemistry-group">
+            <p className="chemistry-group__title">
+              🏆 그룹 순위 {myRank > 0 && <span className="chemistry-group__my-rank">(나: {myRank}위)</span>}
+            </p>
+            {board.length === 1 ? (
+              <p className="chemistry-group__empty">
+                아직 나 혼자예요. 그룹에 링크를 뿌려서 순위를 만들어보세요!
+              </p>
+            ) : (
+              <div className="chemistry-group__list">
+                {board.map((m, i) => (
+                  <div
+                    key={m.id}
+                    className={`chemistry-group__row ${m.id === myMatchId ? "is-me" : ""}`}
+                  >
+                    <span className="chemistry-group__rank">{i + 1}</span>
+                    <span className="chemistry-group__name">
+                      {m.respondent_nickname || "친구"}
+                      {m.id === myMatchId && " (나)"}
+                    </span>
+                    <span className="chemistry-group__percent">{m.percent}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              className="chemistry-group__share-btn"
+              onClick={onShareGroup}
+              disabled={groupShareState === "creating"}
+            >
+              {groupShareLabel || "📤 이 링크 그룹에 공유하기"}
+            </button>
+          </div>
+        )}
+
         {unlocked && (
           <button className="deck-result__share-btn" onClick={onCreateLink} disabled={linkState === "creating"}>
-            {linkState === "creating" && "링크 만드는 중..."}
+            {linkState === "creating" && "여는 중..."}
+            {linkState === "kakao" && "✅ 카카오톡으로 보냈어요"}
             {linkState === "shared" && "✅ 다음 친구에게 보냈어요"}
             {linkState === "copied" && "✅ 궁합 링크 복사됐어요"}
+            {linkState === "error" && "⚠️ 실패했어요, 다시 시도해주세요"}
             {(linkState === "idle" || !linkState) && "👯 나도 다른 친구랑 궁합 보기"}
           </button>
         )}

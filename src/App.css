@@ -1429,6 +1429,11 @@ main {
   color: #4a3200;
 }
 
+.deck-card__badge.is-hot {
+  background: linear-gradient(120deg, #ff5470, #ff9a3c);
+  color: #fff;
+}
+
 .deck-card__body {
   position: relative;
   z-index: 1;
@@ -2761,6 +2766,91 @@ main {
   font-size: 12px;
 }
 
+/* 궁합 그룹 순위 (단톡방 궁합) */
+.chemistry-group {
+  text-align: left;
+  margin: 4px 0 16px;
+  background: #f7f7fb;
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.chemistry-group__title {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.chemistry-group__my-rank {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.chemistry-group__empty {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 0 0 10px;
+}
+
+.chemistry-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chemistry-group__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.chemistry-group__row.is-me {
+  background: rgba(108, 92, 231, 0.12);
+  font-weight: 800;
+}
+
+.chemistry-group__rank {
+  width: 20px;
+  text-align: center;
+  color: var(--color-muted);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.chemistry-group__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chemistry-group__percent {
+  font-weight: 800;
+  color: var(--color-a);
+}
+
+.chemistry-group__share-btn {
+  width: 100%;
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chemistry-group__share-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
 /* 궁합 결과 */
 .deck-result__chemistry-btn {
   display: block;
@@ -3079,6 +3169,53 @@ main {
 .mypage-list__status.is-pending {
   background: rgba(255, 201, 60, 0.2);
   color: #9c7000;
+}
+
+.mypage-push {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.mypage-push__title {
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.mypage-push__desc {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.mypage-push__toggle {
+  flex-shrink: 0;
+  border: none;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  min-width: 56px;
+}
+
+.mypage-push__toggle.is-on {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.mypage-push__toggle:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .mypage-upgrade-link {
