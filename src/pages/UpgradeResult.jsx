@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { trackEvent } from "../utils/analytics";
 
 // 토스 결제창이 successUrl로 돌려보내면 여기서 서버(confirm-payment 엣지함수)에
 // 결제 승인을 요청해서 진짜 결제인지 검증한 뒤 프리미엄을 활성화함.
@@ -32,13 +31,6 @@ export function UpgradeSuccess() {
         return;
       }
       setStatus("done");
-      // GA4 표준 전자상거래 이벤트 - amount는 원화(KRW) 정수
-      trackEvent("purchase", {
-        transaction_id: orderId,
-        value: Number(amount),
-        currency: "KRW",
-        items: [{ item_name: "무제한 이용권" }],
-      });
     })();
   }, [params]);
 
