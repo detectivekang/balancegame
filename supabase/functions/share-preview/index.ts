@@ -26,10 +26,16 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 // 배포된 GitHub Pages 주소. 저장소/도메인이 바뀌면 이 값도 바꿔주세요.
 const SITE_URL = "https://detectivekang.github.io/balancegame";
-const DEFAULT_IMAGE = `${SITE_URL}/og-default.png`; // 없으면 카카오 기본 스크린샷으로 대체됨
+const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`; // 없으면 카카오 기본 스크린샷으로 대체됨
 
 function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  return String(str).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
 }
 
 function renderHtml({ title, description, image, redirectUrl }) {
@@ -61,11 +67,12 @@ function fallbackResponse(redirectUrl = SITE_URL) {
   return new Response(
     renderHtml({
       title: "밸런스게임",
-      description: "친구랑 궁합도 재고, 이상형 월드컵도 열어보세요. 회원가입 없이 바로 시작!",
+      description:
+        "친구랑 궁합도 재고, 이상형 월드컵도 열어보세요. 회원가입 없이 바로 시작!",
       image: DEFAULT_IMAGE,
       redirectUrl,
     }),
-    { headers: { "content-type": "text/html; charset=utf-8" } }
+    { headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }
 
@@ -81,12 +88,15 @@ Deno.serve(async (req) => {
   if (type === "worldcup") {
     const { data, error } = await supabase
       .from("worldcup_results")
-      .select("round_size, sharer_nickname_snapshot, worldcup:worldcups(title), item:worldcup_items(label, image_url)")
+      .select(
+        "round_size, sharer_nickname_snapshot, worldcup:worldcups(title), item:worldcup_items(label, image_url)",
+      )
       .eq("id", id)
       .maybeSingle();
 
     const redirectUrl = `${SITE_URL}/#/worldcup/result/${id}`;
-    if (error || !data || !data.worldcup || !data.item) return fallbackResponse(redirectUrl);
+    if (error || !data || !data.worldcup || !data.item)
+      return fallbackResponse(redirectUrl);
 
     const nickname = data.sharer_nickname_snapshot || "친구";
     return new Response(
@@ -96,14 +106,16 @@ Deno.serve(async (req) => {
         image: data.item.image_url,
         redirectUrl,
       }),
-      { headers: { "content-type": "text/html; charset=utf-8" } }
+      { headers: { "content-type": "text/html; charset=utf-8" } },
     );
   }
 
   if (type === "balance") {
     const { data, error } = await supabase
       .from("balance_results")
-      .select("deck_title, sharer_nickname_snapshot, persona_label, persona_desc")
+      .select(
+        "deck_title, sharer_nickname_snapshot, persona_label, persona_desc",
+      )
       .eq("id", id)
       .maybeSingle();
 
@@ -118,7 +130,7 @@ Deno.serve(async (req) => {
         image: DEFAULT_IMAGE, // 밸런스게임은 문제별 사진이 없어서 기본 이미지 사용
         redirectUrl,
       }),
-      { headers: { "content-type": "text/html; charset=utf-8" } }
+      { headers: { "content-type": "text/html; charset=utf-8" } },
     );
   }
 
