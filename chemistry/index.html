@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>밸런스 게임 궁합 테스트</title>
+
+  <meta property="og:title" content="밸런스 게임 궁합 테스트" />
+  <meta property="og:description" content="친구랑 같이 풀고 얼마나 취향이 맞는지 확인해보세요!" />
+  <meta property="og:image" content="https://detectivekang.github.io/balancegame/og-image.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <script>
+    var id = new URLSearchParams(location.search).get("id");
+    var target = id
+      ? "https://detectivekang.github.io/balancegame/#/chemistry/" + id
+      : "https://detectivekang.github.io/balancegame/";
+    location.replace(target);
+  </script>
+</head>
+<body>
+  <p>이동 중입니다... <a href="https://detectivekang.github.io/balancegame/">여기를 눌러주세요</a></p>
+</body>
+</html>

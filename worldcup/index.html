@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>이상형 월드컵</title>
+
+  <meta property="og:title" content="이상형 월드컵" />
+  <meta property="og:description" content="내 최종 선택은? 결과 확인하고 너도 해봐!" />
+  <meta property="og:image" content="https://detectivekang.github.io/balancegame/og-image.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <script>
+    var id = new URLSearchParams(location.search).get("id");
+    var target = id
+      ? "https://detectivekang.github.io/balancegame/#/worldcup/result/" + id
+      : "https://detectivekang.github.io/balancegame/";
+    location.replace(target);
+  </script>
+</head>
+<body>
+  <p>이동 중입니다... <a href="https://detectivekang.github.io/balancegame/">여기를 눌러주세요</a></p>
+</body>
+</html>
