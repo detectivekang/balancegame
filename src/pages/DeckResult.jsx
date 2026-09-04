@@ -101,8 +101,18 @@ export default function DeckResult({
 
     const chemistryText = `밸런스 게임 - "${deckTitle}" 궁합 테스트\n${url}`;
 
-    // 기기 자체 공유 시트를 거치면 시트 안의 OS "복사" 버튼이 url만 복사하고
-    // 문구는 버리는 경우가 있어서, 무조건 우리가 직접 전체 문구를 복사한다.
+    if (navigator.share) {
+      try {
+        // 링크는 이미 text 안에 포함돼 있으니 url은 따로 넘기지 않는다.
+        await navigator.share({ title: "취향 궁합 테스트", text: chemistryText });
+        setChemistryState("shared");
+      } catch (err) {
+        setChemistryState("idle");
+      }
+      setTimeout(() => setChemistryState("idle"), 2000);
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(chemistryText);
       setChemistryState("copied");

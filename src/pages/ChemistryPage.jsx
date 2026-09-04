@@ -248,20 +248,13 @@ export default function ChemistryPage() {
         .single();
       if (error) throw error;
 
-      const url = `${window.location.origin}${window.location.pathname}#/chemistry/${data.id}`;
-      const text = `친구야 나랑 "${invite.deckTitle}" 궁합 테스트 해볼래? 👉 ${url}`;
+      const url = `${window.location.origin}${window.location.pathname.replace(/\/$/, "")}/chemistry/?id=${data.id}`;
+      const text = `밸런스 게임 - "${invite.deckTitle}" 궁합 테스트\n${url}`;
 
-      if (navigator.share) {
-        try {
-          await navigator.share({ title: "취향 궁합 테스트", text, url });
-          setLinkState("shared");
-        } catch (err) {
-          setLinkState("idle");
-        }
-      } else {
-        await navigator.clipboard.writeText(text);
-        setLinkState("copied");
-      }
+      // 기기 자체 공유 시트를 거치면 시트 안의 OS "복사" 버튼이 url만 복사하고
+      // 문구는 버리는 경우가 있어서, 무조건 우리가 직접 전체 문구를 복사한다.
+      await navigator.clipboard.writeText(text);
+      setLinkState("copied");
     } catch (err) {
       console.error("궁합 링크 생성 실패:", err);
       setLinkState("idle");

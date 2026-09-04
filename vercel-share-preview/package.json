@@ -1,0 +1,9 @@
+{
+  "name": "balancegame-share-preview",
+  "version": "1.0.0",
+  "private": true,
+  "description": "카카오톡 링크 미리보기용 OG 메타태그 프록시 (Vercel Serverless Function). *.supabase.co 도메인을 카카오 스크래퍼가 차단하는 문제를 우회하기 위해 Supabase Edge Function에서 이전함.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}

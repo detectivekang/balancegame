@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../hooks/useSession";
 import { generateWorldcupShareCard, shareOrDownloadImage } from "../utils/shareCard";
-import { getWorldcupShareUrl } from "../utils/sharePreview";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 
@@ -64,21 +63,20 @@ export default function WorldCupResult({ worldcupId, worldcupTitle, champion, ro
         .single();
       if (error) throw error;
 
-      // 카톡 등에 공유할 링크는 실제 결과 페이지가 아니라 og 미리보기 프록시 URL로 보냄.
-      // (카카오 봇이 이 URL을 열면 결과에 맞는 이미지/제목을 보여주고, 사람이 클릭하면
-      // 진짜 결과 페이지로 자동 이동함 - src/utils/sharePreview.js 참고)
-      const url = getWorldcupShareUrl(data.id);
-      const text = `🏆 "${worldcupTitle}" ${roundSize}강 이상형 월드컵 우승은 "${champion.label}"! 너도 해봐 👉 ${url}`;
+      // 결과 페이지로 바로 가는 링크를 텍스트와 함께 공유 (간단하게: 게임명 - 제목 + 링크)
+      const url = `https://detectivekang.github.io/balancegame/worldcup/?id=${data.id}`;
+      const text = `이상형월드컵 - "${worldcupTitle}"\n${url}`;
 
-      // 기기 자체 공유 시트(navigator.share)를 거치면, 시트 안의 OS 자체 "복사" 버튼이
-      // url만 복사하고 text(문구)는 버리는 경우가 많아서 문구가 안 붙는 문제가 있었음.
-      // 그래서 무조건 우리가 직접 전체 문구를 클립보드에 복사해서 100% 예측 가능하게 함.
-      try {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "이상형 월드컵 결과", text, url });
+          setLinkState("shared");
+        } catch (err) {
+          setLinkState("idle");
+        }
+      } else {
         await navigator.clipboard.writeText(text);
         setLinkState("copied");
-      } catch (err) {
-        console.error("결과 링크 복사 실패:", err);
-        setLinkState("idle");
       }
     } catch (err) {
       console.error("결과 링크 생성 실패:", err);
@@ -127,8 +125,9 @@ export default function WorldCupResult({ worldcupId, worldcupTitle, champion, ro
 
         <button className="deck-result__share-btn" onClick={handleShareLink} disabled={linkState === "creating"}>
           {linkState === "creating" && "결과 카드 만드는 중..."}
-          {linkState === "copied" && "✅ 문구+링크가 복사됐어요 (카톡에 붙여넣기)"}
-          {(linkState === "idle" || !linkState) && "📤 결과 문구+링크 복사하기"}
+          {linkState === "shared" && "✅ 친구에게 보냈어요"}
+          {linkState === "copied" && "✅ 결과 링크가 복사됐어요"}
+          {(linkState === "idle" || !linkState) && "📤 결과 공유하기 (링크)"}
         </button>
 
         <button className="wc-result__image-btn" onClick={handleSaveImage} disabled={imageState === "generating"}>
