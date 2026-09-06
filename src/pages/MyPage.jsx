@@ -19,12 +19,16 @@ export default function MyPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
   const [showVotesModal, setShowVotesModal] = useState(false);
+  const [deletingInviteId, setDeletingInviteId] = useState(null);
   const avatarInputRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      // 7일 지났는데 아무도 안 푼 궁합 테스트 초대는 목록을 불러오기 전에 먼저 정리
+      await supabase.rpc("cleanup_my_stale_chemistry_invites");
+
       const [{ count: votes }, { data: sets }, { data: worldcups }, { data: chemistryInvites }] = await Promise.all([
         supabase.from("votes").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase
@@ -100,6 +104,20 @@ export default function MyPage() {
 
   const handleAvatarClick = () => {
     if (!avatarUploading) avatarInputRef.current?.click();
+  };
+
+  const handleDeleteChemistryInvite = async (invite) => {
+    if (!window.confirm(`"${invite.deckTitle}" 궁합 테스트를 삭제할까요? 지금까지 쌓인 응답 기록도 함께 삭제돼요.`)) {
+      return;
+    }
+    setDeletingInviteId(invite.id);
+    const { error } = await supabase.from("chemistry_results").delete().eq("id", invite.id);
+    setDeletingInviteId(null);
+    if (error) {
+      console.error("궁합 테스트 삭제 실패:", error);
+      return;
+    }
+    setMyChemistryInvites((prev) => prev.filter((c) => c.id !== invite.id));
   };
 
   const handleAvatarChange = async (e) => {
@@ -237,11 +255,20 @@ export default function MyPage() {
       {myChemistryInvites.length === 0 && (
         <p className="empty-state">아직 만든 궁합 테스트 초대가 없어요. 문제집을 풀고 결과 화면에서 만들어보세요!</p>
       )}
+      {myChemistryInvites.length > 0 && (
+        <p style={{ fontSize: 12, color: "#999", margin: "-4px 0 10px" }}>
+          만든 지 7일이 지나도 아무도 안 푼 초대는 자동으로 목록에서 정리돼요. 직접 지우려면 🗑 버튼을 눌러주세요.
+        </p>
+      )}
       <div className="mypage-list">
         {myChemistryInvites.map((c) => (
-          <div key={c.id} className="mypage-list__item mypage-list__item--chemistry">
+          <div
+            key={c.id}
+            className="mypage-list__item mypage-list__item--chemistry"
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
+          >
             <span className="mypage-list__emoji">👯</span>
-            <div className="mypage-list__info">
+            <div className="mypage-list__info" style={{ flex: 1, minWidth: 0 }}>
               <div className="mypage-list__title">{c.deckTitle}</div>
               {c.matches.length === 0 ? (
                 <div className="mypage-list__meta">아직 아무도 안 풀었어요</div>
@@ -255,6 +282,24 @@ export default function MyPage() {
                 </div>
               )}
             </div>
+            <button
+              type="button"
+              onClick={() => handleDeleteChemistryInvite(c)}
+              disabled={deletingInviteId === c.id}
+              aria-label="궁합 테스트 삭제"
+              title="삭제"
+              style={{
+                flexShrink: 0,
+                border: "none",
+                background: "transparent",
+                color: "#e74c3c",
+                fontSize: 16,
+                cursor: "pointer",
+                opacity: deletingInviteId === c.id ? 0.4 : 1,
+              }}
+            >
+              🗑
+            </button>
           </div>
         ))}
       </div>

@@ -7,6 +7,7 @@ import AdminExcelUpload from "./AdminExcelUpload";
 import AdminPlayers from "./AdminPlayers";
 import AdminSets from "./AdminSets";
 import AdminWorldcups from "./AdminWorldcups";
+import AdminWorldcupEdit from "./AdminWorldcupEdit";
 import AdminReports from "./AdminReports";
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { key: "sets", label: "문제집 관리" },
   { key: "approvals", label: "승인 관리" },
   { key: "worldcups", label: "월드컵 승인" },
+  { key: "worldcups-edit", label: "월드컵 편집" },
   { key: "reports", label: "신고 관리" },
   { key: "excel", label: "엑셀 업로드" },
 ];
@@ -50,6 +52,7 @@ export default function Admin() {
       {tab === "sets" && <AdminSets />}
       {tab === "approvals" && <AdminApprovals />}
       {tab === "worldcups" && <AdminWorldcups />}
+      {tab === "worldcups-edit" && <AdminWorldcupEdit />}
       {tab === "reports" && <AdminReports />}
       {tab === "excel" && <AdminExcelUpload />}
     </div>
