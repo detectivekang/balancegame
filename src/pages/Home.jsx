@@ -177,8 +177,8 @@ export default function Home() {
     setView("playing");
   };
 
-  const handleVoted = (side, votesA, votesB, questionId) => {
-    setSessionAnswers((prev) => [...prev, { side, votesA, votesB, questionId }]);
+  const handleVoted = (side, votesA, votesB, questionId, question, optionA, optionB) => {
+    setSessionAnswers((prev) => [...prev, { side, votesA, votesB, questionId, question, optionA, optionB }]);
     setXpEarned((prev) => prev + 1);
   };
 
@@ -264,7 +264,6 @@ export default function Home() {
 
   if (view === "playing" && activeDeck) {
     const current = queue[deckIndex];
-    const isLast = deckIndex + 1 >= queue.length;
     return (
       <div className="page page--home">
         <PlayerStatusBar />
@@ -277,13 +276,7 @@ export default function Home() {
         />
         {energyEmpty && <EnergyEmpty />}
         {!energyEmpty && current && (
-          <BalanceCard
-            key={current.id}
-            q={current}
-            onNext={handleNext}
-            onVoted={handleVoted}
-            nextLabel={isLast ? "결과 보기 🎉" : "다음 문제 →"}
-          />
+          <BalanceCard key={current.id} q={current} onNext={handleNext} onVoted={handleVoted} />
         )}
       </div>
     );

@@ -244,6 +244,19 @@ main {
   transform: scale(0.96);
 }
 
+/* 선택 후 바로 다음 문제로 넘어가기 전, 아주 짧게 보여주는 선택 표시.
+   (예전의 %결과 화면 대신 - 흐름이 끊기지 않도록 탭 피드백만 남김) */
+.balance-card__option.is-selected {
+  transform: scale(1.04);
+  outline: 3px solid #fff;
+  outline-offset: -3px;
+}
+
+.balance-card__option.is-dimmed {
+  opacity: 0.35;
+  transform: scale(0.97);
+}
+
 .balance-card__vs {
   align-self: center;
   font-size: 12px;
@@ -1620,6 +1633,32 @@ main {
   padding: 6px 14px;
   border-radius: 999px;
   margin-bottom: 18px;
+}
+
+/* 문제집을 다 풀고 난 뒤 한 번에 보여주는 문제별 통계 (예전엔 문제마다 바로
+   보여줬는데, 흐름이 끊긴다는 피드백이 있어서 결과 화면으로 옮김) */
+.deck-result__stats {
+  text-align: left;
+  margin: 4px 0 20px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.deck-result__stats-title {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 14px 0 10px;
+}
+
+.deck-result__stat-item {
+  margin-bottom: 16px;
+}
+
+.deck-result__stat-question {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 6px;
 }
 
 .deck-result__minority {

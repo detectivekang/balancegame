@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useSession } from "../hooks/useSession";
 import AdFitBanner from "./AdFitBanner";
-import { pickPersona, countMinorityPicks } from "../utils/persona";
-import { generateBalanceShareCard, shareOrDownloadImage } from "../utils/shareCard";
 
 const CONFETTI_COLORS = ["#ff5470", "#3f8efc", "#6c5ce7", "#ffc93c", "#3ecf9e"];
 
@@ -42,48 +40,13 @@ function Confetti() {
 export default function DeckResult({
   deckTitle,
   answers,
-  xpEarned,
   onRestart,
   onOtherDecks,
   onHome,
-  onCreateShareLink,
   onCreateChemistryLink,
 }) {
   const { player } = useSession();
-  const persona = pickPersona(answers);
-  const minorityCount = useMemo(() => countMinorityPicks(answers), [answers]);
-  const [linkState, setLinkState] = useState("idle"); // idle | creating | shared | copied | error
-  const [imageState, setImageState] = useState("idle"); // idle | generating | downloaded
   const [chemistryState, setChemistryState] = useState("idle"); // idle | creating | shared | copied | error
-
-  // 인스타 스토리 등에 올리고 싶은 사람들을 위한 보조 옵션 - 이미지 한 장 저장/공유.
-  const minorityText = minorityCount > 0 ? `😎 이 중 ${minorityCount}개는 소수의견을 선택했어요!` : null;
-
-  const handleSaveImage = async () => {
-    if (imageState === "generating") return;
-    setImageState("generating");
-
-    let blob = null;
-    try {
-      blob = await generateBalanceShareCard({
-        deckTitle,
-        personaLabel: persona.label,
-        personaDesc: persona.desc,
-        minorityText,
-        xpEarned,
-      });
-    } catch (err) {
-      console.error("공유 카드 이미지 생성 실패:", err);
-    }
-
-    if (blob) {
-      const result = await shareOrDownloadImage(blob, "balance-result.png", `나는 "${persona.label}"!`);
-      setImageState(result === "downloaded" ? "downloaded" : "idle");
-    } else {
-      setImageState("idle");
-    }
-    setTimeout(() => setImageState("idle"), 2500);
-  };
 
   const handleChemistryShare = async () => {
     if (chemistryState === "creating" || !onCreateChemistryLink) return;
@@ -119,22 +82,48 @@ export default function DeckResult({
       <div className="deck-result__card">
         <div className="deck-result__badge">🎉 문제집 완료!</div>
         <h2 className="deck-result__deck-title">{deckTitle}</h2>
-        <div className="deck-result__persona">{persona.label}</div>
-        <p className="deck-result__desc">{persona.desc}</p>
 
-        {minorityCount > 0 && (
-          <p className="deck-result__minority">
-            😎 이 중 <b>{minorityCount}개</b>는 소수의견을 선택했어요 — 남다른 취향이네요!
-          </p>
+        {answers.length > 0 && (
+          <div className="deck-result__stats">
+            <h3 className="deck-result__stats-title">📊 문제별 통계</h3>
+            {answers.map((a, i) => {
+              const total = a.votesA + a.votesB;
+              const percentA = total > 0 ? Math.round((a.votesA / total) * 100) : 50;
+              const percentB = 100 - percentA;
+              return (
+                <div key={a.questionId || i} className="deck-result__stat-item">
+                  {a.question && <p className="deck-result__stat-question">{a.question}</p>}
+                  <div className="balance-result balance-result--reveal">
+                    <div className="balance-result__row">
+                      <div className="balance-result__labels">
+                        <span>{a.optionA || "A"}</span>
+                        <span className="balance-result__percent">{percentA}%</span>
+                      </div>
+                      <div className="balance-result__track">
+                        <div
+                          className={`balance-result__fill opt-a ${a.side === "A" ? "is-my-choice" : ""}`}
+                          style={{ width: `${percentA}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="balance-result__row">
+                      <div className="balance-result__labels">
+                        <span>{a.optionB || "B"}</span>
+                        <span className="balance-result__percent">{percentB}%</span>
+                      </div>
+                      <div className="balance-result__track">
+                        <div
+                          className={`balance-result__fill opt-b ${a.side === "B" ? "is-my-choice" : ""}`}
+                          style={{ width: `${percentB}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
-
-        <p className="deck-result__xp">+{xpEarned} XP 획득!</p>
-
-        <button className="wc-result__image-btn" onClick={handleSaveImage} disabled={imageState === "generating"}>
-          {imageState === "generating" && "이미지 만드는 중..."}
-          {imageState === "downloaded" && "✅ 이미지 저장됨"}
-          {(imageState === "idle" || !imageState) && "🖼️ 이미지로 저장 (인스타 스토리용)"}
-        </button>
 
         {onCreateChemistryLink && (
           <button

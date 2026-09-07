@@ -7,7 +7,6 @@ export default function BalanceCard({
   q,
   onNext,
   onVoted,
-  nextLabel = "다음 문제 →",
   recordVote = true, // false면 궁합 테스트처럼 에너지/XP 차감 및 전역 투표 기록 없이 로컬로만 채점
 }) {
   const { user, castVote } = useSession();
@@ -49,9 +48,6 @@ export default function BalanceCard({
   }, [q.id, user?.id, recordVote]);
 
   const voted = Boolean(choice);
-  const totalVotes = votesA + votesB;
-  const percentA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
-  const percentB = 100 - percentA;
 
   const vote = async (side) => {
     if (voted || submitting) return;
@@ -60,7 +56,8 @@ export default function BalanceCard({
     // 않음. 이번 선택만 로컬로 기록해서 채점(onVoted)에 쓰고 끝.
     if (!recordVote) {
       setChoice(side);
-      onVoted && onVoted(side, votesA, votesB, q.id);
+      onVoted && onVoted(side, votesA, votesB, q.id, q.question, q.option_a, q.option_b);
+      advance();
       return;
     }
 
@@ -93,7 +90,8 @@ export default function BalanceCard({
       }
       setChoice(side);
       setSubmitting(false);
-      onVoted && onVoted(side, latestA, latestB, q.id);
+      onVoted && onVoted(side, latestA, latestB, q.id, q.question, q.option_a, q.option_b);
+      advance();
       return;
     }
 
@@ -102,7 +100,8 @@ export default function BalanceCard({
       setVotesA(result.votes_a);
       setVotesB(result.votes_b);
       setChoice(side);
-      onVoted && onVoted(side, result.votes_a, result.votes_b, q.id);
+      onVoted && onVoted(side, result.votes_a, result.votes_b, q.id, q.question, q.option_a, q.option_b);
+      advance();
     } catch (err) {
       console.error("투표 반영 실패:", err);
       // 서버 함수(cast_vote)가 던지는 대표적인 원인들을 사람이 읽을 수 있는 메시지로 변환
@@ -123,6 +122,16 @@ export default function BalanceCard({
     }
   };
 
+  // 선택 후 결과(%)를 보여주지 않고 바로 다음 문제로 넘어감 - 예전엔 선택할 때마다
+  // %가 뜨고 "다음 문제" 버튼을 눌러야 해서 흐름이 자꾸 끊긴다는 피드백이 있었음.
+  // 짧게 선택 표시만 보여준 뒤(버튼 하이라이트) 자동으로 다음 문제로 넘어가고,
+  // 문제별 통계는 문제집을 다 풀고 난 결과 화면(DeckResult)에서 한 번에 보여줌.
+  const advance = () => {
+    setTimeout(() => {
+      onNext && onNext();
+    }, 260);
+  };
+
   if (checking) {
     return (
       <div className="balance-card balance-card--loading">
@@ -130,8 +139,6 @@ export default function BalanceCard({
       </div>
     );
   }
-
-  const previousChoiceLabel = previousChoice === "A" ? q.option_a : previousChoice === "B" ? q.option_b : null;
 
   return (
     <div className="balance-card">
@@ -152,62 +159,27 @@ export default function BalanceCard({
 
       {errorMsg && <p className="balance-card__error">⚠️ {errorMsg}</p>}
 
-      {!voted && (
-        <div className="balance-card__options">
-          <button className="balance-card__option opt-a" onClick={() => vote("A")} disabled={submitting}>
-            {q.option_a}
-          </button>
-          <div className="balance-card__vs">VS</div>
-          <button className="balance-card__option opt-b" onClick={() => vote("B")} disabled={submitting}>
-            {q.option_b}
-          </button>
-        </div>
-      )}
-
-      {voted && (
-        <div className="balance-result balance-result--reveal">
-          <div className="balance-result__row">
-            <div className="balance-result__labels">
-              <span>{q.option_a}</span>
-              <span className="balance-result__percent">{percentA}%</span>
-            </div>
-            <div className="balance-result__track">
-              <div
-                className={`balance-result__fill opt-a ${choice === "A" ? "is-my-choice" : ""}`}
-                style={{ width: `${percentA}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="balance-result__row">
-            <div className="balance-result__labels">
-              <span>{q.option_b}</span>
-              <span className="balance-result__percent">{percentB}%</span>
-            </div>
-            <div className="balance-result__track">
-              <div
-                className={`balance-result__fill opt-b ${choice === "B" ? "is-my-choice" : ""}`}
-                style={{ width: `${percentB}%` }}
-              />
-            </div>
-          </div>
-
-          <p className="balance-result__meta">
-            지금까지 <b>{totalVotes.toLocaleString()}명</b> 참여했어요{recordVote && !previousChoice && " (+1 XP)"}
-          </p>
-
-          {previousChoiceLabel && (
-            <p className="balance-result__previous">
-              📌 예전엔 <b>"{previousChoiceLabel}"</b>을 선택했었어요
-              {previousChoice === choice ? " — 이번에도 같은 선택! 취향 확고하네요 😎" : " — 이번엔 마음이 바뀌었네요!"}
-            </p>
-          )}
-        </div>
-      )}
-
-      <button className="balance-card__next" onClick={onNext}>
-        {nextLabel}
-      </button>
+      <div className="balance-card__options">
+        <button
+          className={`balance-card__option opt-a ${choice === "A" ? "is-selected" : ""} ${
+            voted && choice !== "A" ? "is-dimmed" : ""
+          }`}
+          onClick={() => vote("A")}
+          disabled={submitting || voted}
+        >
+          {q.option_a}
+        </button>
+        <div className="balance-card__vs">VS</div>
+        <button
+          className={`balance-card__option opt-b ${choice === "B" ? "is-selected" : ""} ${
+            voted && choice !== "B" ? "is-dimmed" : ""
+          }`}
+          onClick={() => vote("B")}
+          disabled={submitting || voted}
+        >
+          {q.option_b}
+        </button>
+      </div>
     </div>
   );
 }
